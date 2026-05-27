@@ -8,7 +8,7 @@ Built with [SuperPlane](https://superplane.com).
 
 ## How it works
 
-1. **Start** — EC2 instance boots, loads model credentials from SSM (optional), runs the [official OpenClaw installer](https://docs.openclaw.ai/install), non-interactive onboarding, and `openclaw gateway install`
+1. **Start** — EC2 user data bootstraps the host, loads credentials from SSM, installs OpenClaw (official installer, onboard, gateway). An SSH step waits for boot and verifies the install before registering the agent.
 2. **Metrics sync** — every 5 minutes, SSH collects CPU/memory from the host and gateway status from `openclaw gateway status`
 3. **Stop / Restart** — `openclaw gateway stop` and `openclaw gateway restart` over SSH
 4. **Upgrade** — `openclaw update --yes` or `npm install -g openclaw@<version>` plus gateway restart
@@ -35,7 +35,7 @@ aws ssm put-parameter \
   --value $'ANTHROPIC_API_KEY=sk-ant-...\nAUTH_CHOICE=anthropic-api-key\n'
 ```
 
-Attach an IAM instance profile to your EC2 launches that allows `ssm:GetParameter` on `/openclaw/provision`. The canvas user data fetches this into `/etc/openclaw/provision.env` before setup.
+Attach an IAM instance profile to your EC2 launches that allows `ssm:GetParameter` on `/openclaw/provision`. The canvas user data fetches this into `/etc/openclaw/provision.env`, then runs the OpenClaw install script on first boot.
 
 Supported keys in `provision.env`:
 
