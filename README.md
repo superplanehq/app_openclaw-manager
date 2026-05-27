@@ -8,7 +8,7 @@ Built with [SuperPlane](https://superplane.com).
 
 ## How it works
 
-1. **Start** — EC2 user data bootstraps the host, loads credentials from SSM, installs OpenClaw (official installer, onboard, gateway). An SSH step waits for boot and verifies the install before registering the agent.
+1. **Start** — register agent in memory (`provisioning`), launch EC2, update memory with instance details (`installing`), SSH-verify install, then mark `running` with live metrics
 2. **Metrics sync** — every 5 minutes, SSH collects CPU/memory from the host and gateway status from `openclaw gateway status`
 3. **Stop / Restart** — `openclaw gateway stop` and `openclaw gateway restart` over SSH
 4. **Upgrade** — `openclaw update --yes` or `npm install -g openclaw@<version>` plus gateway restart
