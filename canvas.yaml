@@ -7,6 +7,66 @@ metadata:
   isTemplate: false
 spec:
   nodes:
+    - id: "annotation-quick-start"
+      name: "Quick start"
+      type: "TYPE_WIDGET"
+      component: "annotation"
+      configuration:
+        color: "yellow"
+        width: 360
+        height: 200
+        text: |
+          ## Quick start
+
+          1. Connect **AWS** + secret `openclaw-ec2-ssh-key`
+          2. Set **AMI**, **subnet**, and **key pair** on Create EC2 Instance
+          3. Run **Start OpenClaw server**
+          4. Use **Console** for the fleet table, metrics, upgrade & backup
+      position:
+        x: 120
+        "y": -220
+      isCollapsed: false
+    - id: "annotation-prerequisites"
+      name: "Prerequisites"
+      type: "TYPE_WIDGET"
+      component: "annotation"
+      configuration:
+        color: "blue"
+        width: 320
+        height: 180
+        text: |
+          ### Prerequisites
+
+          - AWS integration (EC2 + AMI create)
+          - EC2 key pair in AWS + private key in SuperPlane
+          - Public subnet with internet access
+          - Optional: SSM `/openclaw/provision` for model API keys
+          - Recommended: **t3.small** (2 GB RAM) or larger
+      position:
+        x: 520
+        "y": -220
+      isCollapsed: false
+    - id: "annotation-operations"
+      name: "Operations"
+      type: "TYPE_WIDGET"
+      component: "annotation"
+      configuration:
+        color: "green"
+        width: 340
+        height: 200
+        text: |
+          ### Operations
+
+          - **Stop / Restart** — gateway over SSH
+          - **Upgrade** — `openclaw update` or pin a version
+          - **Backup** — AMI snapshot (no reboot)
+          - **Metrics sync** — every 5 min for running agents
+
+          Fleet state lives in memory namespace `openclawAgents`.
+      position:
+        x: 120
+        "y": 1320
+      isCollapsed: false
     - id: "trigger-start-server"
       name: "Start OpenClaw server"
       type: "TYPE_TRIGGER"
@@ -38,7 +98,7 @@ spec:
         imageOs: "ubuntu"
         instanceType: "t3.small"
         keyName: "openclaw-key"
-        name: "{{ $[\"Start OpenClaw server\"].data.machine_name }}"
+        name: "{{ $['Start OpenClaw server'].data.machine_name }}"
         region: "us-east-1"
         securityGroupMode: "create"
         subnet: "subnet-0123456789abcdef0"
@@ -99,11 +159,11 @@ spec:
           retries: 20
         environment:
           - name: "AGENT_NAME"
-            value: "{{ $[\"Start OpenClaw server\"].data.agent_name }}"
+            value: "{{ $['Start OpenClaw server'].data.agent_name }}"
           - name: "AUTH_CHOICE"
-            value: "{{ $[\"Start OpenClaw server\"].data.auth_choice }}"
+            value: "{{ $['Start OpenClaw server'].data.auth_choice }}"
           - name: "TARGET_VERSION"
-            value: "{{ $[\"Start OpenClaw server\"].data.version }}"
+            value: "{{ $['Start OpenClaw server'].data.version }}"
         host: "{{ $['Create EC2 Instance'].data.publicIpAddress }}"
         port: 22
         timeout: 900
@@ -121,9 +181,9 @@ spec:
         namespace: "openclawAgents"
         valueList:
           - name: "machine_name"
-            value: "{{ $[\"Start OpenClaw server\"].data.machine_name }}"
+            value: "{{ $['Start OpenClaw server'].data.machine_name }}"
           - name: "agent_name"
-            value: "{{ $[\"Start OpenClaw server\"].data.agent_name }}"
+            value: "{{ $['Start OpenClaw server'].data.agent_name }}"
           - name: "version"
             value: "{{ trim(split(split($['Setup OpenClaw'].data.stdout, \"openclaw_version=\")[1], \"\\n\")[0]) }}"
           - name: "instance_id"
@@ -149,11 +209,20 @@ spec:
         "y": 120
       isCollapsed: false
       paused: false
-    - id: "noop-start-complete"
+    - id: "display-start-complete"
       name: "Start complete"
       type: "TYPE_ACTION"
-      component: "noop"
-      configuration: {}
+      component: "display"
+      configuration:
+        color: "green"
+        message: |
+          OpenClaw server {{ $['Start OpenClaw server'].data.machine_name }} started.
+
+          Instance: {{ $['Create EC2 Instance'].data.instanceId }}
+          Public IP: {{ $['Create EC2 Instance'].data.publicIpAddress }}
+          Agent: {{ $['Start OpenClaw server'].data.agent_name }}
+          Version: {{ trim(split(split($['Setup OpenClaw'].data.stdout, "openclaw_version=")[1], "\n")[0]) }}
+          Gateway: {{ trim(split(split($['Setup OpenClaw'].data.stdout, "gateway_status=")[1], "\n")[0]) }}
       position:
         x: 2520
         "y": 120
@@ -180,7 +249,7 @@ spec:
       configuration:
         matchList:
           - name: "machine_name"
-            value: "{{ $[\"Stop OpenClaw server\"].data.machine_name }}"
+            value: "{{ $['Stop OpenClaw server'].data.machine_name }}"
         namespace: "openclawAgents"
         resultMode: "latest"
       position:
@@ -225,7 +294,7 @@ spec:
       configuration:
         matchList:
           - name: "machine_name"
-            value: "{{ $[\"Stop OpenClaw server\"].data.machine_name }}"
+            value: "{{ $['Stop OpenClaw server'].data.machine_name }}"
         namespace: "openclawAgents"
         valueList:
           - name: "status"
@@ -274,7 +343,7 @@ spec:
       configuration:
         matchList:
           - name: "machine_name"
-            value: "{{ $[\"Restart OpenClaw server\"].data.machine_name }}"
+            value: "{{ $['Restart OpenClaw server'].data.machine_name }}"
         namespace: "openclawAgents"
         resultMode: "latest"
       position:
@@ -319,7 +388,7 @@ spec:
       configuration:
         matchList:
           - name: "machine_name"
-            value: "{{ $[\"Restart OpenClaw server\"].data.machine_name }}"
+            value: "{{ $['Restart OpenClaw server'].data.machine_name }}"
         namespace: "openclawAgents"
         valueList:
           - name: "status"
@@ -371,7 +440,7 @@ spec:
       configuration:
         matchList:
           - name: "machine_name"
-            value: "{{ $[\"upgrade\"].data.machine_name }}"
+            value: "{{ $['upgrade'].data.machine_name }}"
         namespace: "openclawAgents"
         resultMode: "latest"
       position:
@@ -393,7 +462,7 @@ spec:
           set -euo pipefail
           export PATH="$(npm prefix -g)/bin:${PATH}"
           [[ -f /etc/openclaw/provision.env ]] && set -a && source /etc/openclaw/provision.env && set +a
-          TARGET_VERSION="{{ $[\"upgrade\"].data.version }}"
+          TARGET_VERSION="{{ $['upgrade'].data.version }}"
           if [[ "${TARGET_VERSION}" == "latest" ]]; then openclaw update --yes; else npm install -g "openclaw@${TARGET_VERSION}"; openclaw gateway install --force; openclaw gateway restart; fi
           openclaw doctor --non-interactive || true
           cores="$(nproc)"; load1="$(awk '{print $1}' /proc/loadavg)"
@@ -418,7 +487,7 @@ spec:
       configuration:
         matchList:
           - name: "machine_name"
-            value: "{{ $[\"upgrade\"].data.machine_name }}"
+            value: "{{ $['upgrade'].data.machine_name }}"
         namespace: "openclawAgents"
         valueList:
           - name: "version"
@@ -467,7 +536,7 @@ spec:
       configuration:
         matchList:
           - name: "machine_name"
-            value: "{{ $[\"backup\"].data.machine_name }}"
+            value: "{{ $['backup'].data.machine_name }}"
         namespace: "openclawAgents"
         resultMode: "latest"
       position:
@@ -497,7 +566,7 @@ spec:
       configuration:
         matchList:
           - name: "machine_name"
-            value: "{{ $[\"backup\"].data.machine_name }}"
+            value: "{{ $['backup'].data.machine_name }}"
         namespace: "openclawAgents"
         valueList:
           - name: "last_backup_ami"
@@ -615,7 +684,7 @@ spec:
       targetId: "add-agent"
       channel: "success"
     - sourceId: "add-agent"
-      targetId: "noop-start-complete"
+      targetId: "display-start-complete"
       channel: "default"
     - sourceId: "trigger-stop-server"
       targetId: "read-agent-stop"
