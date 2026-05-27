@@ -65,13 +65,7 @@ Then update the canvas:
 3. Configure SSM parameter + instance profile (or bake keys into user data for testing only)
 4. Run **Start OpenClaw server**
 
-## Scripts
-
-| Script | Role |
-|---|---|
-| `scripts/openclaw-setup.sh` | Official installer + non-interactive `openclaw onboard` + gateway daemon |
-| `scripts/openclaw-remote.sh` | Stop, restart, upgrade helpers over SSH |
-| `scripts/openclaw-metrics.sh` | Host CPU/memory + `openclaw --version` + gateway status |
+All install and lifecycle commands run inline in the canvas SSH nodes — no repo scripts required.
 
 ## Customization
 
