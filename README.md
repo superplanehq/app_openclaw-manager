@@ -46,27 +46,6 @@ Supported keys in `provision.env`:
 | `AUTH_CHOICE` | `openai-api-key`, `anthropic-api-key`, or `skip` |
 | `OPENCLAW_GATEWAY_TOKEN` | Optional; auto-generated if omitted |
 
-## Quick start
-
-**Option A — Launch in SuperPlane** (recommended)
-
-Click the badge above to install `canvas.yaml` and `console.yaml`.
-
-**Option B — CLI**
-
-```bash
-superplane canvases create --file canvas.yaml
-```
-
-Then update the canvas:
-
-1. Set the **AWS integration ID** on EC2 nodes
-2. Pick your **region**, **subnet**, **AMI**, **instance type**, and **key pair**
-3. Configure SSM parameter + instance profile (or bake keys into user data for testing only)
-4. Run **Start OpenClaw server**
-
-All install and lifecycle commands run inline in the canvas SSH nodes — no repo scripts required.
-
 ## Customization
 
 | Setting | Default |
