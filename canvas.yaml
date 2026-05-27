@@ -381,19 +381,6 @@ spec:
         set -euo pipefail
         STATUS_DIR=/var/lib/openclaw-setup
         mkdir -p /etc/openclaw "${STATUS_DIR}"
-        apt-get update -y
-        apt-get install -y awscli jq curl
-        if command -v aws >/dev/null 2>&1; then
-          aws ssm get-parameter --name "/openclaw/provision" --with-decryption --region us-east-1 --query Parameter.Value --output text > /etc/openclaw/provision.env 2>/dev/null || true
-        fi
-        touch /etc/openclaw/provision.env
-        {
-          echo "AGENT_NAME={{ $['Start OpenClaw server'].data.agent_name }}"
-          echo "AUTH_CHOICE={{ $['Start OpenClaw server'].data.auth_choice }}"
-          echo "TARGET_VERSION={{ $['Start OpenClaw server'].data.version }}"
-        } >> /etc/openclaw/provision.env
-        chmod 600 /etc/openclaw/provision.env
-        chown ubuntu:ubuntu /etc/openclaw/provision.env "${STATUS_DIR}"
         cat > /etc/openclaw/collect-metrics.sh << 'SCRIPT_EOF'
         #!/bin/bash
         export PATH="$(npm prefix -g)/bin:${PATH}"
@@ -476,7 +463,20 @@ spec:
         echo success > "${STATUS_DIR}/status"
         INSTALL_EOF
         chmod +x /etc/openclaw/*.sh
-        chown ubuntu:ubuntu /etc/openclaw/*.sh
+        chown ubuntu:ubuntu /etc/openclaw/*.sh "${STATUS_DIR}"
+        touch /etc/openclaw/provision.env
+        {
+          echo "AGENT_NAME={{ $['Start OpenClaw server'].data.agent_name }}"
+          echo "AUTH_CHOICE={{ $['Start OpenClaw server'].data.auth_choice }}"
+          echo "TARGET_VERSION={{ $['Start OpenClaw server'].data.version }}"
+        } >> /etc/openclaw/provision.env
+        apt-get update -y
+        apt-get install -y awscli jq curl
+        if command -v aws >/dev/null 2>&1; then
+          aws ssm get-parameter --name "/openclaw/provision" --with-decryption --region us-east-1 --query Parameter.Value --output text >> /etc/openclaw/provision.env 2>/dev/null || true
+        fi
+        chmod 600 /etc/openclaw/provision.env
+        chown ubuntu:ubuntu /etc/openclaw/provision.env
         if ! sudo -u ubuntu -H /etc/openclaw/install-openclaw.sh; then
           echo failed > "${STATUS_DIR}/status"
           echo "install_exit=$?" > "${STATUS_DIR}/failed"
@@ -622,7 +622,7 @@ spec:
         privateKey:
           key: private_key
           secret: openclaw-ec2-ssh-key
-      commands: bash /etc/openclaw/wait-for-result.sh
+      commands: while ! test -f /etc/openclaw/wait-for-result.sh; do sleep 5; done; bash /etc/openclaw/wait-for-result.sh
       connectionRetry:
         enabled: true
         intervalSeconds: 15
