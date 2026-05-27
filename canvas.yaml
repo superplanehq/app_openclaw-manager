@@ -122,16 +122,7 @@ spec:
         privateKey:
           key: private_key
           secret: openclaw-ec2-ssh-key
-      commands: |
-        export PATH="$(npm prefix -g)/bin:${PATH}"
-        [[ -f /etc/openclaw/provision.env ]] && set -a && source /etc/openclaw/provision.env && set +a
-        openclaw gateway stop
-        cores="$(nproc)"; load1="$(awk '{print $1}' /proc/loadavg)"
-        cpu_usage="$(awk -v l="${load1}" -v c="${cores}" 'BEGIN { v=int((l/c)*100); if (v>100) v=100; if (v<0) v=0; print v }')"
-        memory_usage="$(free | awk '/Mem:/ { if ($2 == 0) print 0; else printf "%d", ($3/$2)*100 }')"
-        openclaw_version="$(openclaw --version 2>/dev/null | head -1 | tr -d '\r\n' || echo unknown)"
-        gateway_status="$(openclaw gateway status 2>/dev/null | head -1 | tr -d '\r\n' || echo stopped)"
-        echo "cpu_usage=${cpu_usage}"; echo "memory_usage=${memory_usage}"; echo "openclaw_version=${openclaw_version}"; echo "gateway_status=${gateway_status}"
+      commands: bash /etc/openclaw/stop-gateway.sh
       host: "{{ $['Read Agent (Stop)'].data.values[0].public_ip }}"
       port: 22
       timeout: 300
@@ -203,16 +194,7 @@ spec:
         privateKey:
           key: private_key
           secret: openclaw-ec2-ssh-key
-      commands: |
-        export PATH="$(npm prefix -g)/bin:${PATH}"
-        [[ -f /etc/openclaw/provision.env ]] && set -a && source /etc/openclaw/provision.env && set +a
-        openclaw gateway restart
-        cores="$(nproc)"; load1="$(awk '{print $1}' /proc/loadavg)"
-        cpu_usage="$(awk -v l="${load1}" -v c="${cores}" 'BEGIN { v=int((l/c)*100); if (v>100) v=100; if (v<0) v=0; print v }')"
-        memory_usage="$(free | awk '/Mem:/ { if ($2 == 0) print 0; else printf "%d", ($3/$2)*100 }')"
-        openclaw_version="$(openclaw --version 2>/dev/null | head -1 | tr -d '\r\n' || echo unknown)"
-        gateway_status="$(openclaw gateway status 2>/dev/null | head -1 | tr -d '\r\n' || echo stopped)"
-        echo "cpu_usage=${cpu_usage}"; echo "memory_usage=${memory_usage}"; echo "openclaw_version=${openclaw_version}"; echo "gateway_status=${gateway_status}"
+      commands: bash /etc/openclaw/restart-gateway.sh
       host: "{{ $['Read Agent (Restart)'].data.values[0].public_ip }}"
       port: 22
       timeout: 300
@@ -328,18 +310,10 @@ spec:
         privateKey:
           key: private_key
           secret: openclaw-ec2-ssh-key
-      commands: |
-        export PATH="$(npm prefix -g)/bin:${PATH}"
-        [[ -f /etc/openclaw/provision.env ]] && set -a && source /etc/openclaw/provision.env && set +a
-        TARGET_VERSION="{{ $['upgrade'].data.version }}"
-        if [[ "${TARGET_VERSION}" == "latest" ]]; then openclaw update --yes; else npm install -g "openclaw@${TARGET_VERSION}"; openclaw gateway install --force; openclaw gateway restart; fi
-        openclaw doctor --non-interactive || true
-        cores="$(nproc)"; load1="$(awk '{print $1}' /proc/loadavg)"
-        cpu_usage="$(awk -v l="${load1}" -v c="${cores}" 'BEGIN { v=int((l/c)*100); if (v>100) v=100; if (v<0) v=0; print v }')"
-        memory_usage="$(free | awk '/Mem:/ { if ($2 == 0) print 0; else printf "%d", ($3/$2)*100 }')"
-        openclaw_version="$(openclaw --version 2>/dev/null | head -1 | tr -d '\r\n' || echo unknown)"
-        gateway_status="$(openclaw gateway status 2>/dev/null | head -1 | tr -d '\r\n' || echo stopped)"
-        echo "cpu_usage=${cpu_usage}"; echo "memory_usage=${memory_usage}"; echo "openclaw_version=${openclaw_version}"; echo "gateway_status=${gateway_status}"
+      commands: bash /etc/openclaw/upgrade-openclaw.sh
+      environment:
+      - name: TARGET_VERSION
+        value: "{{ $['upgrade'].data.version }}"
       host: "{{ $['Read Agent (Upgrade)'].data.values[0].public_ip }}"
       port: 22
       timeout: 1800
@@ -420,6 +394,68 @@ spec:
         } >> /etc/openclaw/provision.env
         chmod 600 /etc/openclaw/provision.env
         chown ubuntu:ubuntu /etc/openclaw/provision.env "${STATUS_DIR}"
+        cat > /etc/openclaw/collect-metrics.sh << 'SCRIPT_EOF'
+        #!/bin/bash
+        export PATH="$(npm prefix -g)/bin:${PATH}"
+        cores="$(nproc)"
+        load1="$(awk '{print $1}' /proc/loadavg)"
+        cpu_usage="$(awk -v l="${load1}" -v c="${cores}" 'BEGIN { v=int((l/c)*100); if (v>100) v=100; if (v<0) v=0; print v }')"
+        memory_usage="$(free | awk '/Mem:/ { if ($2 == 0) print 0; else printf "%d", ($3/$2)*100 }')"
+        openclaw_version="$(openclaw --version 2>/dev/null | head -1 | tr -d '\r\n' || echo unknown)"
+        gateway_status="$(openclaw gateway status 2>/dev/null | head -1 | tr -d '\r\n' || echo stopped)"
+        echo "cpu_usage=${cpu_usage}"
+        echo "memory_usage=${memory_usage}"
+        echo "openclaw_version=${openclaw_version}"
+        echo "gateway_status=${gateway_status}"
+        SCRIPT_EOF
+        cat > /etc/openclaw/wait-for-result.sh << 'SCRIPT_EOF'
+        #!/bin/bash
+        STATUS_DIR=/var/lib/openclaw-setup
+        ATTEMPTS=0
+        MAX_ATTEMPTS=80
+        while [ "${ATTEMPTS}" -lt "${MAX_ATTEMPTS}" ]; do
+          if [ -f "${STATUS_DIR}/failed" ]; then
+            cat "${STATUS_DIR}/failed" >&2
+            exit 1
+          fi
+          if [ -f "${STATUS_DIR}/result" ]; then
+            cat "${STATUS_DIR}/result"
+            exit 0
+          fi
+          ATTEMPTS=$((ATTEMPTS + 1))
+          sleep 15
+        done
+        echo "setup_status=timeout" >&2
+        exit 1
+        SCRIPT_EOF
+        cat > /etc/openclaw/stop-gateway.sh << 'SCRIPT_EOF'
+        #!/bin/bash
+        export PATH="$(npm prefix -g)/bin:${PATH}"
+        openclaw gateway stop
+        bash /etc/openclaw/collect-metrics.sh
+        SCRIPT_EOF
+        cat > /etc/openclaw/restart-gateway.sh << 'SCRIPT_EOF'
+        #!/bin/bash
+        export PATH="$(npm prefix -g)/bin:${PATH}"
+        openclaw gateway restart
+        bash /etc/openclaw/collect-metrics.sh
+        SCRIPT_EOF
+        cat > /etc/openclaw/upgrade-openclaw.sh << 'SCRIPT_EOF'
+        #!/bin/bash
+        set -eu
+        export PATH="$(npm prefix -g)/bin:${PATH}"
+        [ -f /etc/openclaw/provision.env ] && set -a && source /etc/openclaw/provision.env && set +a
+        TARGET_VERSION="${TARGET_VERSION:-latest}"
+        if [ "${TARGET_VERSION}" = "latest" ]; then
+          openclaw update --yes
+        else
+          npm install -g "openclaw@${TARGET_VERSION}"
+          openclaw gateway install --force
+          openclaw gateway restart
+        fi
+        openclaw doctor --non-interactive || true
+        bash /etc/openclaw/collect-metrics.sh
+        SCRIPT_EOF
         cat > /etc/openclaw/install-openclaw.sh << 'INSTALL_EOF'
         #!/bin/bash
         set -eu
@@ -436,21 +472,11 @@ spec:
         openclaw agents add "${AGENT_NAME}" 2>/dev/null || true
         openclaw gateway install --force && openclaw gateway start
         openclaw doctor --non-interactive || true
-        cores="$(nproc)"; load1="$(awk '{print $1}' /proc/loadavg)"
-        cpu_usage="$(awk -v l="${load1}" -v c="${cores}" 'BEGIN { v=int((l/c)*100); if (v>100) v=100; if (v<0) v=0; print v }')"
-        memory_usage="$(free | awk '/Mem:/ { if ($2 == 0) print 0; else printf "%d", ($3/$2)*100 }')"
-        openclaw_version="$(openclaw --version 2>/dev/null | head -1 | tr -d '\r\n' || echo unknown)"
-        gateway_status="$(openclaw gateway status 2>/dev/null | head -1 | tr -d '\r\n' || echo stopped)"
-        {
-          echo "cpu_usage=${cpu_usage}"
-          echo "memory_usage=${memory_usage}"
-          echo "openclaw_version=${openclaw_version}"
-          echo "gateway_status=${gateway_status}"
-        } > "${STATUS_DIR}/result"
+        bash /etc/openclaw/collect-metrics.sh > "${STATUS_DIR}/result"
         echo success > "${STATUS_DIR}/status"
         INSTALL_EOF
-        chmod +x /etc/openclaw/install-openclaw.sh
-        chown ubuntu:ubuntu /etc/openclaw/install-openclaw.sh
+        chmod +x /etc/openclaw/*.sh
+        chown ubuntu:ubuntu /etc/openclaw/*.sh
         if ! sudo -u ubuntu -H /etc/openclaw/install-openclaw.sh; then
           echo failed > "${STATUS_DIR}/status"
           echo "install_exit=$?" > "${STATUS_DIR}/failed"
@@ -596,31 +622,11 @@ spec:
         privateKey:
           key: private_key
           secret: openclaw-ec2-ssh-key
-      commands: |
-        export PATH="$(npm prefix -g)/bin:${PATH}"
-        STATUS_DIR=/var/lib/openclaw-setup
-        ATTEMPTS=0
-        MAX_ATTEMPTS=80
-        while [[ ${ATTEMPTS} -lt ${MAX_ATTEMPTS} ]]; do
-          if [[ -f "${STATUS_DIR}/result" ]]; then
-            cat "${STATUS_DIR}/result"
-            echo "setup_status=$(cat "${STATUS_DIR}/status" 2>/dev/null || echo unknown)"
-            exit 0
-          fi
-          if [[ -f "${STATUS_DIR}/failed" ]]; then
-            echo "setup_status=failed"
-            cat "${STATUS_DIR}/failed" 2>/dev/null || true
-            exit 1
-          fi
-          ATTEMPTS=$((ATTEMPTS + 1))
-          sleep 15
-        done
-        echo "setup_status=timeout"
-        exit 1
+      commands: bash /etc/openclaw/wait-for-result.sh
       connectionRetry:
         enabled: true
         intervalSeconds: 15
-        retries: 20
+        retries: 40
       host: "{{ $['Create EC2 Instance'].data.publicIpAddress }}"
       port: 22
       timeout: 1800
@@ -700,15 +706,7 @@ spec:
         privateKey:
           key: private_key
           secret: openclaw-ec2-ssh-key
-      commands: |
-        export PATH="$(npm prefix -g)/bin:${PATH}"
-        [[ -f /etc/openclaw/provision.env ]] && set -a && source /etc/openclaw/provision.env && set +a
-        cores="$(nproc)"; load1="$(awk '{print $1}' /proc/loadavg)"
-        cpu_usage="$(awk -v l="${load1}" -v c="${cores}" 'BEGIN { v=int((l/c)*100); if (v>100) v=100; if (v<0) v=0; print v }')"
-        memory_usage="$(free | awk '/Mem:/ { if ($2 == 0) print 0; else printf "%d", ($3/$2)*100 }')"
-        openclaw_version="$(openclaw --version 2>/dev/null | head -1 | tr -d '\r\n' || echo unknown)"
-        gateway_status="$(openclaw gateway status 2>/dev/null | head -1 | tr -d '\r\n' || echo stopped)"
-        echo "cpu_usage=${cpu_usage}"; echo "memory_usage=${memory_usage}"; echo "openclaw_version=${openclaw_version}"; echo "gateway_status=${gateway_status}"
+      commands: bash /etc/openclaw/collect-metrics.sh
       host: "{{ $['Read Running Agents'].data.values[0].public_ip }}"
       port: 22
       timeout: 120
