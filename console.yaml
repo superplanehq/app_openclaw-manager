@@ -85,6 +85,11 @@ spec:
         - field: gateway_status
           format: status
           label: Gateway
+        - field: status
+          format: status
+          label: Status
+        - field: verify_error
+          label: Verify error
         - field: last_backup_ami
           label: Last backup AMI
         - field: updated_at
