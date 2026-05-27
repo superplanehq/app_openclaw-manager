@@ -71,13 +71,7 @@ spec:
     configuration:
       color: green
       message: |
-        OpenClaw server {{ $['Start OpenClaw server'].data.machine_name }} started.
-
-        Instance: {{ $['Create EC2 Instance'].data.instanceId }}
-        Public IP: {{ $['Create EC2 Instance'].data.publicIpAddress }}
-        Agent: {{ $['Start OpenClaw server'].data.agent_name }}
-        Version: {{ trim(split(split($['Verify OpenClaw Install'].data.stdout, "openclaw_version=")[1], "\n")[0]) }}
-        Gateway: {{ trim(split(split($['Verify OpenClaw Install'].data.stdout, "gateway_status=")[1], "\n")[0]) }}
+        {{ $['Start OpenClaw server'].data.agent_name }} · {{ $['Create EC2 Instance'].data.publicIpAddress }}
     position:
       x: 2680
       y: 120
