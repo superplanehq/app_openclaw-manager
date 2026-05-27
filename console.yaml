@@ -168,34 +168,6 @@ spec:
           type: donut
           xField: version
         title: Agent versions
-    - id: quick-start
-      type: markdown
-      content:
-        body: >
-          **Launch on AWS EC2**
-
-
-          Run **Start OpenClaw server** to launch Ubuntu on EC2, install [OpenClaw](https://docs.openclaw.ai/install) via the official installer, and register the gateway in fleet memory.
-
-
-          **Model credentials**
-
-
-          Store API keys in AWS SSM Parameter Store at `/openclaw/provision` (dotenv format). EC2 user data loads them into `/etc/openclaw/provision.env` before setup runs.
-
-
-          **Operate from this console**
-
-
-          - Metrics sync every 5 minutes from live EC2 hosts (`/proc` + `openclaw gateway status`).
-
-          - **Stop** / **Restart** call `openclaw gateway stop|restart` over SSH.
-
-          - **Upgrade** runs `openclaw update` (or pins an npm version). **Backup** creates an AMI.
-
-
-          **Target version:** `latest` (Upgrade row action).
-        title: Quick start
     - id: node-start
       type: node
       content:
@@ -295,38 +267,31 @@ spec:
       h: 5
       minW: 2
       minH: 2
-    - i: quick-start
-      x: 0
-      'y': 15
-      w: 6
-      h: 8
-      minW: 2
-      minH: 2
     - i: node-start
-      x: 6
+      x: 0
       'y': 15
       w: 2
       h: 3
       minW: 2
       minH: 2
     - i: node-stop
-      x: 8
+      x: 2
       'y': 15
       w: 2
       h: 3
       minW: 2
       minH: 2
     - i: node-restart
-      x: 10
+      x: 4
       'y': 15
       w: 2
       h: 3
       minW: 2
       minH: 2
     - i: recent-activity
-      x: 6
+      x: 0
       'y': 18
-      w: 6
+      w: 12
       h: 5
       minW: 2
       minH: 2
