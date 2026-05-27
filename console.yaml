@@ -65,6 +65,12 @@ spec:
           columns:
             - field: machine_name
               label: Machine
+            - field: instance_id
+              label: EC2 instance
+            - field: public_ip
+              label: Public IP
+            - field: region
+              label: Region
             - field: cpu_usage
               format: percent
               label: CPU usage
@@ -74,7 +80,12 @@ spec:
             - field: agent_name
               label: Agent
             - field: version
-              label: Version
+              label: OpenClaw version
+            - field: gateway_status
+              label: Gateway
+              format: status
+            - field: last_backup_ami
+              label: Last backup AMI
             - field: updated_at
               format: relative
               label: Last updated
@@ -87,7 +98,7 @@ spec:
               node: upgrade
               payload:
                 machine_name: '{{ machine_name }}'
-                version: 1.5.0
+                version: latest
               variant: primary
             - confirm: Create a backup of {{ machine_name }}?
               icon: external-link
@@ -161,24 +172,29 @@ spec:
       type: markdown
       content:
         body: >
-          **Bring an agent online**
+          **Launch on AWS EC2**
 
 
-          Run **Start OpenClaw server** on the canvas (or use the node panel below) to register a machine in memory.
-          Metrics refresh automatically every five minutes.
+          Run **Start OpenClaw server** to launch Ubuntu on EC2, install [OpenClaw](https://docs.openclaw.ai/install) via the official installer, and register the gateway in fleet memory.
+
+
+          **Model credentials**
+
+
+          Store API keys in AWS SSM Parameter Store at `/openclaw/provision` (dotenv format). EC2 user data loads them into `/etc/openclaw/provision.env` before setup runs.
 
 
           **Operate from this console**
 
 
-          - Sort the main table by CPU to find hot agents.
+          - Metrics sync every 5 minutes from live EC2 hosts (`/proc` + `openclaw gateway status`).
 
-          - Use **Upgrade** or **Backup** on a row to invoke the canvas flows.
+          - **Stop** / **Restart** call `openclaw gateway stop|restart` over SSH.
 
-          - Stopped machines appear in the table below — restart them from there.
+          - **Upgrade** runs `openclaw update` (or pins an npm version). **Backup** creates an AMI.
 
 
-          **Target version:** `1.5.0` (Upgrade row action).
+          **Target version:** `latest` (Upgrade row action).
         title: Quick start
     - id: node-start
       type: node

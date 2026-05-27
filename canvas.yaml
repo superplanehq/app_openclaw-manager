@@ -3,52 +3,95 @@ kind: "Canvas"
 metadata:
   id: "583ddc65-1fa7-4605-84f2-09b311fb4bd8"
   name: "Console: Openclaw Manager"
-  description: ""
+  description: "Manage OpenClaw agents on AWS EC2"
   isTemplate: false
 spec:
   nodes:
-    - id: "trigger-upgrade"
-      name: "upgrade"
+    - id: "trigger-start-server"
+      name: "Start OpenClaw server"
       type: "TYPE_TRIGGER"
       component: "start"
       configuration:
         templates:
           - name: "run"
             payload:
-              machine_name: ""
-              version: "1.5.0"
+              agent_name: "research-bot"
+              auth_choice: "openai-api-key"
+              machine_name: "claw-prod-01"
+              version: "latest"
       position:
         x: 120
-        "y": 864
+        "y": 120
       isCollapsed: false
       paused: false
-    - id: "upsert-upgrade-agent"
-      name: "Bump agent version"
+    - id: "create-ec2-instance"
+      name: "Create EC2 Instance"
       type: "TYPE_ACTION"
-      component: "upsertMemory"
+      component: "aws.ec2.createInstance"
       configuration:
-        matchList:
-          - name: "machine_name"
-            value: "{{ $[\"upgrade\"].data.machine_name }}"
-        namespace: "openclawAgents"
-        valueList:
-          - name: "version"
-            value: "{{ $[\"upgrade\"].data.version }}"
-          - name: "updated_at"
-            value: "{{ int(now().Unix()) }}"
+        allowHttpFromInternet: true
+        allowHttpsFromInternet: false
+        allowSshFromInternet: true
+        associatePublicIpAddress: true
+        configureRootVolume: true
+        image: "ami-0123456789abcdef0"
+        imageOs: "ubuntu"
+        instanceType: "t3.small"
+        keyName: "openclaw-key"
+        name: "{{ $[\"Start OpenClaw server\"].data.machine_name }}"
+        region: "us-east-1"
+        securityGroupMode: "create"
+        subnet: "subnet-0123456789abcdef0"
+        userData: |
+          #!/bin/bash
+          set -euo pipefail
+          mkdir -p /etc/openclaw
+          apt-get update -y
+          apt-get install -y awscli jq
+          if command -v aws >/dev/null 2>&1; then
+            aws ssm get-parameter --name "/openclaw/provision" --with-decryption --region us-east-1 --query Parameter.Value --output text > /etc/openclaw/provision.env 2>/dev/null || true
+          fi
+          touch /etc/openclaw/provision.env
+          chmod 600 /etc/openclaw/provision.env
+          chown ubuntu:ubuntu /etc/openclaw/provision.env
+        volumeSizeGiB: 30
+        volumeType: "gp3"
       position:
-        x: 576
-        "y": 864
+        x: 552
+        "y": 120
       isCollapsed: false
+      integration:
+        id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
       paused: false
-    - id: "noop-upgrade-complete"
-      name: "Upgrade complete"
+    - id: "setup-openclaw"
+      name: "Setup OpenClaw"
       type: "TYPE_ACTION"
-      component: "noop"
-      configuration: {}
+      component: "ssh"
+      configuration:
+        authentication:
+          authMethod: "ssh_key"
+          privateKey:
+            key: "private_key"
+            secret: "openclaw-ec2-ssh-key"
+        commands: "curl -fsSL https://raw.githubusercontent.com/superplanehq/app_openclaw-manager/main/scripts/openclaw-setup.sh -o /tmp/openclaw-setup.sh && curl -fsSL https://raw.githubusercontent.com/superplanehq/app_openclaw-manager/main/scripts/openclaw-metrics.sh -o /tmp/openclaw-metrics.sh && chmod +x /tmp/openclaw-setup.sh /tmp/openclaw-metrics.sh && AGENT_NAME={{ $[\"Start OpenClaw server\"].data.agent_name }} AUTH_CHOICE={{ $[\"Start OpenClaw server\"].data.auth_choice }} TARGET_VERSION={{ $[\"Start OpenClaw server\"].data.version }} bash /tmp/openclaw-setup.sh"
+        connectionRetry:
+          enabled: true
+          intervalSeconds: 15
+          retries: 20
+        environment:
+          - name: "AGENT_NAME"
+            value: "{{ $[\"Start OpenClaw server\"].data.agent_name }}"
+          - name: "AUTH_CHOICE"
+            value: "{{ $[\"Start OpenClaw server\"].data.auth_choice }}"
+          - name: "TARGET_VERSION"
+            value: "{{ $[\"Start OpenClaw server\"].data.version }}"
+        host: "{{ $['Create EC2 Instance'].data.publicIpAddress }}"
+        port: 22
+        timeout: 900
+        username: "ubuntu"
       position:
-        x: 1056
-        "y": 864
+        x: 984
+        "y": 120
       isCollapsed: false
       paused: false
     - id: "add-agent"
@@ -63,17 +106,37 @@ spec:
           - name: "agent_name"
             value: "{{ $[\"Start OpenClaw server\"].data.agent_name }}"
           - name: "version"
-            value: "{{ $[\"Start OpenClaw server\"].data.version }}"
+            value: "{{ trim(split(split($['Setup OpenClaw'].data.stdout, \"openclaw_version=\")[1], \"\\n\")[0]) }}"
+          - name: "instance_id"
+            value: "{{ $['Create EC2 Instance'].data.instanceId }}"
+          - name: "region"
+            value: "{{ $['Create EC2 Instance'].data.region }}"
+          - name: "public_ip"
+            value: "{{ $['Create EC2 Instance'].data.publicIpAddress }}"
+          - name: "instance_type"
+            value: "{{ $['Create EC2 Instance'].data.instanceType }}"
           - name: "cpu_usage"
-            value: "{{ 15 + int(now().Unix()) % 25 }}"
+            value: "{{ trim(split(split($['Setup OpenClaw'].data.stdout, \"cpu_usage=\")[1], \"\\n\")[0]) }}"
           - name: "memory_usage"
-            value: "{{ 30 + int(now().Unix()) % 40 }}"
+            value: "{{ trim(split(split($['Setup OpenClaw'].data.stdout, \"memory_usage=\")[1], \"\\n\")[0]) }}"
+          - name: "gateway_status"
+            value: "{{ trim(split(split($['Setup OpenClaw'].data.stdout, \"gateway_status=\")[1], \"\\n\")[0]) }}"
           - name: "status"
             value: "running"
           - name: "updated_at"
             value: "{{ int(now().Unix()) }}"
       position:
-        x: 552
+        x: 1416
+        "y": 120
+      isCollapsed: false
+      paused: false
+    - id: "noop-start-complete"
+      name: "Start complete"
+      type: "TYPE_ACTION"
+      component: "noop"
+      configuration: {}
+      position:
+        x: 1848
         "y": 120
       isCollapsed: false
       paused: false
@@ -91,6 +154,41 @@ spec:
         "y": 336
       isCollapsed: false
       paused: false
+    - id: "read-agent-stop"
+      name: "Read Agent (Stop)"
+      type: "TYPE_ACTION"
+      component: "readMemory"
+      configuration:
+        matchList:
+          - name: "machine_name"
+            value: "{{ $[\"Stop OpenClaw server\"].data.machine_name }}"
+        namespace: "openclawAgents"
+        resultMode: "latest"
+      position:
+        x: 552
+        "y": 336
+      isCollapsed: false
+      paused: false
+    - id: "ssh-stop-openclaw"
+      name: "Stop OpenClaw Gateway"
+      type: "TYPE_ACTION"
+      component: "ssh"
+      configuration:
+        authentication:
+          authMethod: "ssh_key"
+          privateKey:
+            key: "private_key"
+            secret: "openclaw-ec2-ssh-key"
+        commands: "curl -fsSL https://raw.githubusercontent.com/superplanehq/app_openclaw-manager/main/scripts/openclaw-remote.sh -o /tmp/openclaw-remote.sh && curl -fsSL https://raw.githubusercontent.com/superplanehq/app_openclaw-manager/main/scripts/openclaw-metrics.sh -o /tmp/openclaw-metrics.sh && chmod +x /tmp/openclaw-remote.sh /tmp/openclaw-metrics.sh && bash /tmp/openclaw-remote.sh stop"
+        host: "{{ $['Read Agent (Stop)'].data.values[0].public_ip }}"
+        port: 22
+        timeout: 300
+        username: "ubuntu"
+      position:
+        x: 984
+        "y": 336
+      isCollapsed: false
+      paused: false
     - id: "upsert-mark-stopped"
       name: "Mark server stopped"
       type: "TYPE_ACTION"
@@ -103,6 +201,8 @@ spec:
         valueList:
           - name: "status"
             value: "stopped"
+          - name: "gateway_status"
+            value: "{{ trim(split(split($['Stop OpenClaw Gateway'].data.stdout, \"gateway_status=\")[1], \"\\n\")[0]) }}"
           - name: "cpu_usage"
             value: "0"
           - name: "memory_usage"
@@ -110,7 +210,17 @@ spec:
           - name: "updated_at"
             value: "{{ int(now().Unix()) }}"
       position:
-        x: 552
+        x: 1416
+        "y": 336
+      isCollapsed: false
+      paused: false
+    - id: "noop-stop-complete"
+      name: "Stop complete"
+      type: "TYPE_ACTION"
+      component: "noop"
+      configuration: {}
+      position:
+        x: 1848
         "y": 336
       isCollapsed: false
       paused: false
@@ -128,64 +238,39 @@ spec:
         "y": 576
       isCollapsed: false
       paused: false
-    - id: "trigger-backup"
-      name: "backup"
-      type: "TYPE_TRIGGER"
-      component: "start"
+    - id: "read-agent-restart"
+      name: "Read Agent (Restart)"
+      type: "TYPE_ACTION"
+      component: "readMemory"
       configuration:
-        templates:
-          - name: "run"
-            payload:
-              machine_name: ""
+        matchList:
+          - name: "machine_name"
+            value: "{{ $[\"Restart OpenClaw server\"].data.machine_name }}"
+        namespace: "openclawAgents"
+        resultMode: "latest"
       position:
-        x: 120
-        "y": 1152
+        x: 552
+        "y": 576
       isCollapsed: false
       paused: false
-    - id: "noop-backup-complete"
-      name: "Backup complete"
+    - id: "ssh-restart-openclaw"
+      name: "Restart OpenClaw Gateway"
       type: "TYPE_ACTION"
-      component: "noop"
-      configuration: {}
-      position:
-        x: 576
-        "y": 1152
-      isCollapsed: false
-      paused: false
-    - id: "trigger-start-server"
-      name: "Start OpenClaw server"
-      type: "TYPE_TRIGGER"
-      component: "start"
+      component: "ssh"
       configuration:
-        templates:
-          - name: "run"
-            payload:
-              agent_name: "research-bot"
-              machine_name: "claw-prod-01"
-              version: "1.4.2"
+        authentication:
+          authMethod: "ssh_key"
+          privateKey:
+            key: "private_key"
+            secret: "openclaw-ec2-ssh-key"
+        commands: "curl -fsSL https://raw.githubusercontent.com/superplanehq/app_openclaw-manager/main/scripts/openclaw-remote.sh -o /tmp/openclaw-remote.sh && curl -fsSL https://raw.githubusercontent.com/superplanehq/app_openclaw-manager/main/scripts/openclaw-metrics.sh -o /tmp/openclaw-metrics.sh && chmod +x /tmp/openclaw-remote.sh /tmp/openclaw-metrics.sh && bash /tmp/openclaw-remote.sh restart"
+        host: "{{ $['Read Agent (Restart)'].data.values[0].public_ip }}"
+        port: 22
+        timeout: 300
+        username: "ubuntu"
       position:
-        x: 120
-        "y": 120
-      isCollapsed: false
-      paused: false
-    - id: "noop-start-complete"
-      name: "Start complete"
-      type: "TYPE_ACTION"
-      component: "noop"
-      configuration: {}
-      position:
-        x: 1032
-        "y": 120
-      isCollapsed: false
-      paused: false
-    - id: "noop-stop-complete"
-      name: "Stop complete"
-      type: "TYPE_ACTION"
-      component: "noop"
-      configuration: {}
-      position:
-        x: 1032
-        "y": 336
+        x: 984
+        "y": 576
       isCollapsed: false
       paused: false
     - id: "upsert-restart-server"
@@ -200,14 +285,18 @@ spec:
         valueList:
           - name: "status"
             value: "running"
+          - name: "gateway_status"
+            value: "{{ trim(split(split($['Restart OpenClaw Gateway'].data.stdout, \"gateway_status=\")[1], \"\\n\")[0]) }}"
           - name: "cpu_usage"
-            value: "{{ 10 + int(now().Unix()) % 20 }}"
+            value: "{{ trim(split(split($['Restart OpenClaw Gateway'].data.stdout, \"cpu_usage=\")[1], \"\\n\")[0]) }}"
           - name: "memory_usage"
-            value: "{{ 25 + int(now().Unix()) % 30 }}"
+            value: "{{ trim(split(split($['Restart OpenClaw Gateway'].data.stdout, \"memory_usage=\")[1], \"\\n\")[0]) }}"
+          - name: "version"
+            value: "{{ trim(split(split($['Restart OpenClaw Gateway'].data.stdout, \"openclaw_version=\")[1], \"\\n\")[0]) }}"
           - name: "updated_at"
             value: "{{ int(now().Unix()) }}"
       position:
-        x: 552
+        x: 1416
         "y": 576
       isCollapsed: false
       paused: false
@@ -217,35 +306,313 @@ spec:
       component: "noop"
       configuration: {}
       position:
-        x: 1032
+        x: 1848
         "y": 576
+      isCollapsed: false
+      paused: false
+    - id: "trigger-upgrade"
+      name: "upgrade"
+      type: "TYPE_TRIGGER"
+      component: "start"
+      configuration:
+        templates:
+          - name: "run"
+            payload:
+              machine_name: ""
+              version: "latest"
+      position:
+        x: 120
+        "y": 864
+      isCollapsed: false
+      paused: false
+    - id: "read-agent-upgrade"
+      name: "Read Agent (Upgrade)"
+      type: "TYPE_ACTION"
+      component: "readMemory"
+      configuration:
+        matchList:
+          - name: "machine_name"
+            value: "{{ $[\"upgrade\"].data.machine_name }}"
+        namespace: "openclawAgents"
+        resultMode: "latest"
+      position:
+        x: 552
+        "y": 864
+      isCollapsed: false
+      paused: false
+    - id: "ssh-upgrade-openclaw"
+      name: "Upgrade OpenClaw"
+      type: "TYPE_ACTION"
+      component: "ssh"
+      configuration:
+        authentication:
+          authMethod: "ssh_key"
+          privateKey:
+            key: "private_key"
+            secret: "openclaw-ec2-ssh-key"
+        commands: "curl -fsSL https://raw.githubusercontent.com/superplanehq/app_openclaw-manager/main/scripts/openclaw-remote.sh -o /tmp/openclaw-remote.sh && curl -fsSL https://raw.githubusercontent.com/superplanehq/app_openclaw-manager/main/scripts/openclaw-metrics.sh -o /tmp/openclaw-metrics.sh && chmod +x /tmp/openclaw-remote.sh /tmp/openclaw-metrics.sh && bash /tmp/openclaw-remote.sh upgrade {{ $[\"upgrade\"].data.version }}"
+        host: "{{ $['Read Agent (Upgrade)'].data.values[0].public_ip }}"
+        port: 22
+        timeout: 1800
+        username: "ubuntu"
+      position:
+        x: 984
+        "y": 864
+      isCollapsed: false
+      paused: false
+    - id: "upsert-upgrade-agent"
+      name: "Bump agent version"
+      type: "TYPE_ACTION"
+      component: "upsertMemory"
+      configuration:
+        matchList:
+          - name: "machine_name"
+            value: "{{ $[\"upgrade\"].data.machine_name }}"
+        namespace: "openclawAgents"
+        valueList:
+          - name: "version"
+            value: "{{ trim(split(split($['Upgrade OpenClaw'].data.stdout, \"openclaw_version=\")[1], \"\\n\")[0]) }}"
+          - name: "gateway_status"
+            value: "{{ trim(split(split($['Upgrade OpenClaw'].data.stdout, \"gateway_status=\")[1], \"\\n\")[0]) }}"
+          - name: "cpu_usage"
+            value: "{{ trim(split(split($['Upgrade OpenClaw'].data.stdout, \"cpu_usage=\")[1], \"\\n\")[0]) }}"
+          - name: "memory_usage"
+            value: "{{ trim(split(split($['Upgrade OpenClaw'].data.stdout, \"memory_usage=\")[1], \"\\n\")[0]) }}"
+          - name: "updated_at"
+            value: "{{ int(now().Unix()) }}"
+      position:
+        x: 1416
+        "y": 864
+      isCollapsed: false
+      paused: false
+    - id: "noop-upgrade-complete"
+      name: "Upgrade complete"
+      type: "TYPE_ACTION"
+      component: "noop"
+      configuration: {}
+      position:
+        x: 1848
+        "y": 864
+      isCollapsed: false
+      paused: false
+    - id: "trigger-backup"
+      name: "backup"
+      type: "TYPE_TRIGGER"
+      component: "start"
+      configuration:
+        templates:
+          - name: "run"
+            payload:
+              machine_name: ""
+      position:
+        x: 120
+        "y": 1152
+      isCollapsed: false
+      paused: false
+    - id: "read-agent-backup"
+      name: "Read Agent (Backup)"
+      type: "TYPE_ACTION"
+      component: "readMemory"
+      configuration:
+        matchList:
+          - name: "machine_name"
+            value: "{{ $[\"backup\"].data.machine_name }}"
+        namespace: "openclawAgents"
+        resultMode: "latest"
+      position:
+        x: 552
+        "y": 1152
+      isCollapsed: false
+      paused: false
+    - id: "create-ami-backup"
+      name: "Create AMI Backup"
+      type: "TYPE_ACTION"
+      component: "aws.ec2.createImage"
+      configuration:
+        description: "OpenClaw backup for {{ $['Read Agent (Backup)'].data.values[0].machine_name }}"
+        instanceId: "{{ $['Read Agent (Backup)'].data.values[0].instance_id }}"
+        name: "openclaw-{{ $['Read Agent (Backup)'].data.values[0].machine_name }}-{{ int(now().Unix()) }}"
+        noReboot: true
+        region: "{{ $['Read Agent (Backup)'].data.values[0].region }}"
+      position:
+        x: 984
+        "y": 1152
+      isCollapsed: false
+      integration:
+        id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+      paused: false
+    - id: "upsert-backup-metadata"
+      name: "Record backup"
+      type: "TYPE_ACTION"
+      component: "upsertMemory"
+      configuration:
+        matchList:
+          - name: "machine_name"
+            value: "{{ $[\"backup\"].data.machine_name }}"
+        namespace: "openclawAgents"
+        valueList:
+          - name: "last_backup_ami"
+            value: "{{ $['Create AMI Backup'].data.image.imageId }}"
+          - name: "last_backup_at"
+            value: "{{ int(now().Unix()) }}"
+          - name: "updated_at"
+            value: "{{ int(now().Unix()) }}"
+      position:
+        x: 1416
+        "y": 1152
+      isCollapsed: false
+      paused: false
+    - id: "noop-backup-complete"
+      name: "Backup complete"
+      type: "TYPE_ACTION"
+      component: "noop"
+      configuration: {}
+      position:
+        x: 1848
+        "y": 1152
+      isCollapsed: false
+      paused: false
+    - id: "trigger-metrics-sync"
+      name: "Metrics Sync"
+      type: "TYPE_TRIGGER"
+      component: "schedule"
+      configuration:
+        minutesInterval: 5
+        timezone: "0"
+        type: "minutes"
+      position:
+        x: 120
+        "y": 1440
+      isCollapsed: false
+      paused: false
+    - id: "read-all-agents"
+      name: "Read Running Agents"
+      type: "TYPE_ACTION"
+      component: "readMemory"
+      configuration:
+        emitMode: "oneByOne"
+        matchList:
+          - name: "status"
+            value: "running"
+        namespace: "openclawAgents"
+        resultMode: "all"
+      position:
+        x: 552
+        "y": 1440
+      isCollapsed: false
+      paused: false
+    - id: "ssh-collect-metrics"
+      name: "Collect Metrics"
+      type: "TYPE_ACTION"
+      component: "ssh"
+      configuration:
+        authentication:
+          authMethod: "ssh_key"
+          privateKey:
+            key: "private_key"
+            secret: "openclaw-ec2-ssh-key"
+        commands: "curl -fsSL https://raw.githubusercontent.com/superplanehq/app_openclaw-manager/main/scripts/openclaw-metrics.sh -o /tmp/openclaw-metrics.sh && chmod +x /tmp/openclaw-metrics.sh && bash /tmp/openclaw-metrics.sh"
+        host: "{{ $['Read Running Agents'].data.values[0].public_ip }}"
+        port: 22
+        timeout: 120
+        username: "ubuntu"
+      position:
+        x: 984
+        "y": 1440
+      isCollapsed: false
+      paused: false
+    - id: "upsert-metrics"
+      name: "Update Fleet Metrics"
+      type: "TYPE_ACTION"
+      component: "upsertMemory"
+      configuration:
+        matchList:
+          - name: "machine_name"
+            value: "{{ $['Read Running Agents'].data.values[0].machine_name }}"
+        namespace: "openclawAgents"
+        valueList:
+          - name: "cpu_usage"
+            value: "{{ trim(split(split($['Collect Metrics'].data.stdout, \"cpu_usage=\")[1], \"\\n\")[0]) }}"
+          - name: "memory_usage"
+            value: "{{ trim(split(split($['Collect Metrics'].data.stdout, \"memory_usage=\")[1], \"\\n\")[0]) }}"
+          - name: "version"
+            value: "{{ trim(split(split($['Collect Metrics'].data.stdout, \"openclaw_version=\")[1], \"\\n\")[0]) }}"
+          - name: "gateway_status"
+            value: "{{ trim(split(split($['Collect Metrics'].data.stdout, \"gateway_status=\")[1], \"\\n\")[0]) }}"
+          - name: "updated_at"
+            value: "{{ int(now().Unix()) }}"
+      position:
+        x: 1416
+        "y": 1440
       isCollapsed: false
       paused: false
   edges:
     - sourceId: "trigger-start-server"
-      targetId: "add-agent"
+      targetId: "create-ec2-instance"
       channel: "default"
+    - sourceId: "create-ec2-instance"
+      targetId: "setup-openclaw"
+      channel: "default"
+    - sourceId: "setup-openclaw"
+      targetId: "add-agent"
+      channel: "success"
     - sourceId: "add-agent"
       targetId: "noop-start-complete"
       channel: "default"
     - sourceId: "trigger-stop-server"
-      targetId: "upsert-mark-stopped"
+      targetId: "read-agent-stop"
       channel: "default"
+    - sourceId: "read-agent-stop"
+      targetId: "ssh-stop-openclaw"
+      channel: "found"
+    - sourceId: "ssh-stop-openclaw"
+      targetId: "upsert-mark-stopped"
+      channel: "success"
     - sourceId: "upsert-mark-stopped"
       targetId: "noop-stop-complete"
       channel: "default"
     - sourceId: "trigger-restart-server"
-      targetId: "upsert-restart-server"
+      targetId: "read-agent-restart"
       channel: "default"
+    - sourceId: "read-agent-restart"
+      targetId: "ssh-restart-openclaw"
+      channel: "found"
+    - sourceId: "ssh-restart-openclaw"
+      targetId: "upsert-restart-server"
+      channel: "success"
     - sourceId: "upsert-restart-server"
       targetId: "noop-restart-complete"
       channel: "default"
     - sourceId: "trigger-upgrade"
-      targetId: "upsert-upgrade-agent"
+      targetId: "read-agent-upgrade"
       channel: "default"
+    - sourceId: "read-agent-upgrade"
+      targetId: "ssh-upgrade-openclaw"
+      channel: "found"
+    - sourceId: "ssh-upgrade-openclaw"
+      targetId: "upsert-upgrade-agent"
+      channel: "success"
     - sourceId: "upsert-upgrade-agent"
       targetId: "noop-upgrade-complete"
       channel: "default"
     - sourceId: "trigger-backup"
+      targetId: "read-agent-backup"
+      channel: "default"
+    - sourceId: "read-agent-backup"
+      targetId: "create-ami-backup"
+      channel: "found"
+    - sourceId: "create-ami-backup"
+      targetId: "upsert-backup-metadata"
+      channel: "default"
+    - sourceId: "upsert-backup-metadata"
       targetId: "noop-backup-complete"
       channel: "default"
+    - sourceId: "trigger-metrics-sync"
+      targetId: "read-all-agents"
+      channel: "default"
+    - sourceId: "read-all-agents"
+      targetId: "ssh-collect-metrics"
+      channel: "found"
+    - sourceId: "ssh-collect-metrics"
+      targetId: "upsert-metrics"
+      channel: "success"
