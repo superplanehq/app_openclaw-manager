@@ -1,0 +1,251 @@
+apiVersion: "v1"
+kind: "Canvas"
+metadata:
+  id: "583ddc65-1fa7-4605-84f2-09b311fb4bd8"
+  name: "Console: Openclaw Manager"
+  description: ""
+  isTemplate: false
+spec:
+  nodes:
+    - id: "trigger-upgrade"
+      name: "upgrade"
+      type: "TYPE_TRIGGER"
+      component: "start"
+      configuration:
+        templates:
+          - name: "run"
+            payload:
+              machine_name: ""
+              version: "1.5.0"
+      position:
+        x: 120
+        "y": 864
+      isCollapsed: false
+      paused: false
+    - id: "upsert-upgrade-agent"
+      name: "Bump agent version"
+      type: "TYPE_ACTION"
+      component: "upsertMemory"
+      configuration:
+        matchList:
+          - name: "machine_name"
+            value: "{{ $[\"upgrade\"].data.machine_name }}"
+        namespace: "openclawAgents"
+        valueList:
+          - name: "version"
+            value: "{{ $[\"upgrade\"].data.version }}"
+          - name: "updated_at"
+            value: "{{ int(now().Unix()) }}"
+      position:
+        x: 576
+        "y": 864
+      isCollapsed: false
+      paused: false
+    - id: "noop-upgrade-complete"
+      name: "Upgrade complete"
+      type: "TYPE_ACTION"
+      component: "noop"
+      configuration: {}
+      position:
+        x: 1056
+        "y": 864
+      isCollapsed: false
+      paused: false
+    - id: "add-agent"
+      name: "Register agent in memory"
+      type: "TYPE_ACTION"
+      component: "addMemory"
+      configuration:
+        namespace: "openclawAgents"
+        valueList:
+          - name: "machine_name"
+            value: "{{ $[\"Start OpenClaw server\"].data.machine_name }}"
+          - name: "agent_name"
+            value: "{{ $[\"Start OpenClaw server\"].data.agent_name }}"
+          - name: "version"
+            value: "{{ $[\"Start OpenClaw server\"].data.version }}"
+          - name: "cpu_usage"
+            value: "{{ 15 + int(now().Unix()) % 25 }}"
+          - name: "memory_usage"
+            value: "{{ 30 + int(now().Unix()) % 40 }}"
+          - name: "status"
+            value: "running"
+          - name: "updated_at"
+            value: "{{ int(now().Unix()) }}"
+      position:
+        x: 552
+        "y": 120
+      isCollapsed: false
+      paused: false
+    - id: "trigger-stop-server"
+      name: "Stop OpenClaw server"
+      type: "TYPE_TRIGGER"
+      component: "start"
+      configuration:
+        templates:
+          - name: "run"
+            payload:
+              machine_name: "claw-prod-01"
+      position:
+        x: 120
+        "y": 336
+      isCollapsed: false
+      paused: false
+    - id: "upsert-mark-stopped"
+      name: "Mark server stopped"
+      type: "TYPE_ACTION"
+      component: "upsertMemory"
+      configuration:
+        matchList:
+          - name: "machine_name"
+            value: "{{ $[\"Stop OpenClaw server\"].data.machine_name }}"
+        namespace: "openclawAgents"
+        valueList:
+          - name: "status"
+            value: "stopped"
+          - name: "cpu_usage"
+            value: "0"
+          - name: "memory_usage"
+            value: "0"
+          - name: "updated_at"
+            value: "{{ int(now().Unix()) }}"
+      position:
+        x: 552
+        "y": 336
+      isCollapsed: false
+      paused: false
+    - id: "trigger-restart-server"
+      name: "Restart OpenClaw server"
+      type: "TYPE_TRIGGER"
+      component: "start"
+      configuration:
+        templates:
+          - name: "run"
+            payload:
+              machine_name: "claw-prod-01"
+      position:
+        x: 120
+        "y": 576
+      isCollapsed: false
+      paused: false
+    - id: "trigger-backup"
+      name: "backup"
+      type: "TYPE_TRIGGER"
+      component: "start"
+      configuration:
+        templates:
+          - name: "run"
+            payload:
+              machine_name: ""
+      position:
+        x: 120
+        "y": 1152
+      isCollapsed: false
+      paused: false
+    - id: "noop-backup-complete"
+      name: "Backup complete"
+      type: "TYPE_ACTION"
+      component: "noop"
+      configuration: {}
+      position:
+        x: 576
+        "y": 1152
+      isCollapsed: false
+      paused: false
+    - id: "trigger-start-server"
+      name: "Start OpenClaw server"
+      type: "TYPE_TRIGGER"
+      component: "start"
+      configuration:
+        templates:
+          - name: "run"
+            payload:
+              agent_name: "research-bot"
+              machine_name: "claw-prod-01"
+              version: "1.4.2"
+      position:
+        x: 120
+        "y": 120
+      isCollapsed: false
+      paused: false
+    - id: "noop-start-complete"
+      name: "Start complete"
+      type: "TYPE_ACTION"
+      component: "noop"
+      configuration: {}
+      position:
+        x: 1032
+        "y": 120
+      isCollapsed: false
+      paused: false
+    - id: "noop-stop-complete"
+      name: "Stop complete"
+      type: "TYPE_ACTION"
+      component: "noop"
+      configuration: {}
+      position:
+        x: 1032
+        "y": 336
+      isCollapsed: false
+      paused: false
+    - id: "upsert-restart-server"
+      name: "Apply restart state"
+      type: "TYPE_ACTION"
+      component: "upsertMemory"
+      configuration:
+        matchList:
+          - name: "machine_name"
+            value: "{{ $[\"Restart OpenClaw server\"].data.machine_name }}"
+        namespace: "openclawAgents"
+        valueList:
+          - name: "status"
+            value: "running"
+          - name: "cpu_usage"
+            value: "{{ 10 + int(now().Unix()) % 20 }}"
+          - name: "memory_usage"
+            value: "{{ 25 + int(now().Unix()) % 30 }}"
+          - name: "updated_at"
+            value: "{{ int(now().Unix()) }}"
+      position:
+        x: 552
+        "y": 576
+      isCollapsed: false
+      paused: false
+    - id: "noop-restart-complete"
+      name: "Restart complete"
+      type: "TYPE_ACTION"
+      component: "noop"
+      configuration: {}
+      position:
+        x: 1032
+        "y": 576
+      isCollapsed: false
+      paused: false
+  edges:
+    - sourceId: "trigger-start-server"
+      targetId: "add-agent"
+      channel: "default"
+    - sourceId: "add-agent"
+      targetId: "noop-start-complete"
+      channel: "default"
+    - sourceId: "trigger-stop-server"
+      targetId: "upsert-mark-stopped"
+      channel: "default"
+    - sourceId: "upsert-mark-stopped"
+      targetId: "noop-stop-complete"
+      channel: "default"
+    - sourceId: "trigger-restart-server"
+      targetId: "upsert-restart-server"
+      channel: "default"
+    - sourceId: "upsert-restart-server"
+      targetId: "noop-restart-complete"
+      channel: "default"
+    - sourceId: "trigger-upgrade"
+      targetId: "upsert-upgrade-agent"
+      channel: "default"
+    - sourceId: "upsert-upgrade-agent"
+      targetId: "noop-upgrade-complete"
+      channel: "default"
+    - sourceId: "trigger-backup"
+      targetId: "noop-backup-complete"
+      channel: "default"
