@@ -2,7 +2,7 @@ apiVersion: "v1"
 kind: "Canvas"
 metadata:
   id: "583ddc65-1fa7-4605-84f2-09b311fb4bd8"
-  name: "Console: Openclaw Manager"
+  name: "Openclaw Manager"
   description: "Manage OpenClaw agents on AWS EC2"
   isTemplate: false
 spec:
@@ -57,7 +57,7 @@ spec:
         volumeSizeGiB: 30
         volumeType: "gp3"
       position:
-        x: 552
+        x: 720
         "y": 120
       isCollapsed: false
       integration:
@@ -111,7 +111,7 @@ spec:
         timeout: 900
         username: "ubuntu"
       position:
-        x: 984
+        x: 1320
         "y": 120
       isCollapsed: false
       paused: false
@@ -147,7 +147,7 @@ spec:
           - name: "updated_at"
             value: "{{ int(now().Unix()) }}"
       position:
-        x: 1416
+        x: 1920
         "y": 120
       isCollapsed: false
       paused: false
@@ -157,7 +157,7 @@ spec:
       component: "noop"
       configuration: {}
       position:
-        x: 1848
+        x: 2520
         "y": 120
       isCollapsed: false
       paused: false
@@ -186,7 +186,7 @@ spec:
         namespace: "openclawAgents"
         resultMode: "latest"
       position:
-        x: 552
+        x: 720
         "y": 336
       isCollapsed: false
       paused: false
@@ -216,7 +216,7 @@ spec:
         timeout: 300
         username: "ubuntu"
       position:
-        x: 984
+        x: 1320
         "y": 336
       isCollapsed: false
       paused: false
@@ -241,7 +241,7 @@ spec:
           - name: "updated_at"
             value: "{{ int(now().Unix()) }}"
       position:
-        x: 1416
+        x: 1920
         "y": 336
       isCollapsed: false
       paused: false
@@ -251,7 +251,7 @@ spec:
       component: "noop"
       configuration: {}
       position:
-        x: 1848
+        x: 2520
         "y": 336
       isCollapsed: false
       paused: false
@@ -280,7 +280,7 @@ spec:
         namespace: "openclawAgents"
         resultMode: "latest"
       position:
-        x: 552
+        x: 720
         "y": 576
       isCollapsed: false
       paused: false
@@ -310,7 +310,7 @@ spec:
         timeout: 300
         username: "ubuntu"
       position:
-        x: 984
+        x: 1320
         "y": 576
       isCollapsed: false
       paused: false
@@ -337,7 +337,7 @@ spec:
           - name: "updated_at"
             value: "{{ int(now().Unix()) }}"
       position:
-        x: 1416
+        x: 1920
         "y": 576
       isCollapsed: false
       paused: false
@@ -347,7 +347,7 @@ spec:
       component: "noop"
       configuration: {}
       position:
-        x: 1848
+        x: 2520
         "y": 576
       isCollapsed: false
       paused: false
@@ -377,7 +377,7 @@ spec:
         namespace: "openclawAgents"
         resultMode: "latest"
       position:
-        x: 552
+        x: 720
         "y": 864
       isCollapsed: false
       paused: false
@@ -409,7 +409,7 @@ spec:
         timeout: 1800
         username: "ubuntu"
       position:
-        x: 984
+        x: 1320
         "y": 864
       isCollapsed: false
       paused: false
@@ -434,7 +434,7 @@ spec:
           - name: "updated_at"
             value: "{{ int(now().Unix()) }}"
       position:
-        x: 1416
+        x: 1920
         "y": 864
       isCollapsed: false
       paused: false
@@ -444,7 +444,7 @@ spec:
       component: "noop"
       configuration: {}
       position:
-        x: 1848
+        x: 2520
         "y": 864
       isCollapsed: false
       paused: false
@@ -473,7 +473,7 @@ spec:
         namespace: "openclawAgents"
         resultMode: "latest"
       position:
-        x: 552
+        x: 720
         "y": 1152
       isCollapsed: false
       paused: false
@@ -488,7 +488,7 @@ spec:
         noReboot: true
         region: "{{ $['Read Agent (Backup)'].data.values[0].region }}"
       position:
-        x: 984
+        x: 1320
         "y": 1152
       isCollapsed: false
       integration:
@@ -511,7 +511,7 @@ spec:
           - name: "updated_at"
             value: "{{ int(now().Unix()) }}"
       position:
-        x: 1416
+        x: 1920
         "y": 1152
       isCollapsed: false
       paused: false
@@ -521,7 +521,7 @@ spec:
       component: "noop"
       configuration: {}
       position:
-        x: 1848
+        x: 2520
         "y": 1152
       isCollapsed: false
       paused: false
@@ -550,7 +550,7 @@ spec:
         namespace: "openclawAgents"
         resultMode: "all"
       position:
-        x: 552
+        x: 720
         "y": 1440
       isCollapsed: false
       paused: false
@@ -579,7 +579,7 @@ spec:
         timeout: 120
         username: "ubuntu"
       position:
-        x: 984
+        x: 1320
         "y": 1440
       isCollapsed: false
       paused: false
@@ -604,7 +604,7 @@ spec:
           - name: "updated_at"
             value: "{{ int(now().Unix()) }}"
       position:
-        x: 1416
+        x: 1920
         "y": 1440
       isCollapsed: false
       paused: false
