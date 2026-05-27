@@ -1,258 +1,259 @@
+---
 apiVersion: v1
 kind: Console
 metadata:
-  canvasId: 583ddc65-1fa7-4605-84f2-09b311fb4bd8
-  name: 'Openclaw Manager'
+  canvasId: a0e48261-7746-4d6b-bca3-ee1b7962c4a5
+  name: Openclaw Manager
 spec:
   panels:
-    - id: kpi-agent-count
-      type: number
-      content:
-        dataSource:
-          kind: memory
-          namespace: openclawAgents
-        render:
-          aggregation: count
-          kind: number
-          label: Agents in memory
-        title: Fleet size
-    - id: kpi-avg-cpu
-      type: number
-      content:
-        dataSource:
-          kind: memory
-          namespace: openclawAgents
-        render:
-          aggregation: avg
-          field: cpu_usage
+  - id: kpi-agent-count
+    type: number
+    content:
+      dataSource:
+        kind: memory
+        namespace: openclawAgents
+      render:
+        aggregation: count
+        kind: number
+        label: Agents in memory
+      title: Fleet size
+  - id: kpi-avg-cpu
+    type: number
+    content:
+      dataSource:
+        kind: memory
+        namespace: openclawAgents
+      render:
+        aggregation: avg
+        field: cpu_usage
+        format: percent
+        kind: number
+        label: Fleet average
+      title: Avg CPU
+  - id: kpi-avg-memory
+    type: number
+    content:
+      dataSource:
+        kind: memory
+        namespace: openclawAgents
+      render:
+        aggregation: avg
+        field: memory_usage
+        format: percent
+        kind: number
+        label: Fleet average
+      title: Avg memory
+  - id: kpi-peak-cpu
+    type: number
+    content:
+      dataSource:
+        kind: memory
+        namespace: openclawAgents
+      render:
+        aggregation: max
+        field: cpu_usage
+        format: percent
+        kind: number
+        label: Hottest agent
+      title: Peak CPU
+  - id: openclaw-agents
+    type: table
+    content:
+      dataSource:
+        kind: memory
+        namespace: openclawAgents
+      render:
+        columns:
+        - field: machine_name
+          label: Machine
+        - field: instance_id
+          label: EC2 instance
+        - field: public_ip
+          label: Public IP
+        - field: region
+          label: Region
+        - field: cpu_usage
           format: percent
-          kind: number
-          label: Fleet average
-        title: Avg CPU
-    - id: kpi-avg-memory
-      type: number
-      content:
-        dataSource:
-          kind: memory
-          namespace: openclawAgents
-        render:
-          aggregation: avg
+          label: CPU usage
+        - field: memory_usage
+          format: percent
+          label: Memory usage
+        - field: agent_name
+          label: Agent
+        - field: version
+          label: OpenClaw version
+        - field: gateway_status
+          format: status
+          label: Gateway
+        - field: last_backup_ami
+          label: Last backup AMI
+        - field: updated_at
+          format: relative
+          label: Last updated
+        kind: table
+        rowActions:
+        - confirm: Upgrade {{ agent_name }} on {{ machine_name }} to the latest version?
+          icon: refresh
+          kind: trigger
+          label: Upgrade
+          node: upgrade
+          payload:
+            machine_name: "{{ machine_name }}"
+            version: latest
+          variant: primary
+        - confirm: Create a backup of {{ machine_name }}?
+          icon: external-link
+          kind: trigger
+          label: Backup
+          node: backup
+          payload:
+            machine_name: "{{ machine_name }}"
+          variant: default
+        sort:
+          field: cpu_usage
+          order: desc
+        where:
+        - field: status
+          op: neq
+          value: stopped
+      title: OpenClaw Agents
+  - id: chart-cpu-by-machine
+    type: chart
+    content:
+      dataSource:
+        kind: memory
+        namespace: openclawAgents
+      render:
+        kind: chart
+        legend: hide
+        series:
+        - field: cpu_usage
+          format: percent
+          label: CPU
+        sort:
+          field: cpu_usage
+          order: desc
+        type: bar
+        xField: machine_name
+      title: CPU by machine
+  - id: chart-memory-by-machine
+    type: chart
+    content:
+      dataSource:
+        kind: memory
+        namespace: openclawAgents
+      render:
+        kind: chart
+        legend: hide
+        series:
+        - field: memory_usage
+          format: percent
+          label: Memory
+        sort:
           field: memory_usage
-          format: percent
-          kind: number
-          label: Fleet average
-        title: Avg memory
-    - id: kpi-peak-cpu
-      type: number
-      content:
-        dataSource:
-          kind: memory
-          namespace: openclawAgents
-        render:
-          aggregation: max
-          field: cpu_usage
-          format: percent
-          kind: number
-          label: Hottest agent
-        title: Peak CPU
-    - id: openclaw-agents
-      type: table
-      content:
-        dataSource:
-          kind: memory
-          namespace: openclawAgents
-        render:
-          columns:
-            - field: machine_name
-              label: Machine
-            - field: instance_id
-              label: EC2 instance
-            - field: public_ip
-              label: Public IP
-            - field: region
-              label: Region
-            - field: cpu_usage
-              format: percent
-              label: CPU usage
-            - field: memory_usage
-              format: percent
-              label: Memory usage
-            - field: agent_name
-              label: Agent
-            - field: version
-              label: OpenClaw version
-            - field: gateway_status
-              label: Gateway
-              format: status
-            - field: last_backup_ami
-              label: Last backup AMI
-            - field: updated_at
-              format: relative
-              label: Last updated
-          kind: table
-          rowActions:
-            - confirm: Upgrade {{ agent_name }} on {{ machine_name }} to the latest version?
-              icon: refresh
-              kind: trigger
-              label: Upgrade
-              node: upgrade
-              payload:
-                machine_name: '{{ machine_name }}'
-                version: latest
-              variant: primary
-            - confirm: Create a backup of {{ machine_name }}?
-              icon: external-link
-              kind: trigger
-              label: Backup
-              node: backup
-              payload:
-                machine_name: '{{ machine_name }}'
-              variant: default
-          sort:
-            field: cpu_usage
-            order: desc
-          where:
-            - field: status
-              op: neq
-              value: stopped
-        title: OpenClaw Agents
-    - id: chart-cpu-by-machine
-      type: chart
-      content:
-        dataSource:
-          kind: memory
-          namespace: openclawAgents
-        render:
-          kind: chart
-          legend: hide
-          series:
-            - field: cpu_usage
-              format: percent
-              label: CPU
-          sort:
-            field: cpu_usage
-            order: desc
-          type: bar
-          xField: machine_name
-        title: CPU by machine
-    - id: chart-memory-by-machine
-      type: chart
-      content:
-        dataSource:
-          kind: memory
-          namespace: openclawAgents
-        render:
-          kind: chart
-          legend: hide
-          series:
-            - field: memory_usage
-              format: percent
-              label: Memory
-          sort:
-            field: memory_usage
-            order: desc
-          type: bar
-          xField: machine_name
-        title: Memory by machine
-    - id: chart-versions
-      type: chart
-      content:
-        dataSource:
-          kind: memory
-          namespace: openclawAgents
-        render:
-          kind: chart
-          legend: show
-          series:
-            - label: Agents
-          type: donut
-          xField: version
-        title: Agent versions
-    - id: recent-activity
-      type: table
-      content:
-        dataSource:
-          kind: executions
-          limit: 25
-        render:
-          columns:
-            - field: nodeName
-              label: Node
-            - field: status
-              format: status
-              label: Status
-            - field: createdAt
-              format: relative
-              label: Started
-            - field: durationMs
-              format: duration
-              label: Duration
-          kind: table
-          sort:
-            field: createdAt
-            order: desc
-        title: Recent canvas activity
+          order: desc
+        type: bar
+        xField: machine_name
+      title: Memory by machine
+  - id: chart-versions
+    type: chart
+    content:
+      dataSource:
+        kind: memory
+        namespace: openclawAgents
+      render:
+        kind: chart
+        legend: show
+        series:
+        - label: Agents
+        type: donut
+        xField: version
+      title: Agent versions
+  - id: recent-activity
+    type: table
+    content:
+      dataSource:
+        kind: executions
+        limit: 25
+      render:
+        columns:
+        - field: nodeName
+          label: Node
+        - field: status
+          format: status
+          label: Status
+        - field: createdAt
+          format: relative
+          label: Started
+        - field: durationMs
+          format: duration
+          label: Duration
+        kind: table
+        sort:
+          field: createdAt
+          order: desc
+      title: Recent canvas activity
   layout:
-    - i: kpi-agent-count
-      x: 0
-      'y': 0
-      w: 3
-      h: 3
-      minW: 2
-      minH: 2
-    - i: kpi-avg-cpu
-      x: 3
-      'y': 0
-      w: 3
-      h: 3
-      minW: 2
-      minH: 2
-    - i: kpi-avg-memory
-      x: 6
-      'y': 0
-      w: 3
-      h: 3
-      minW: 2
-      minH: 2
-    - i: kpi-peak-cpu
-      x: 9
-      'y': 0
-      w: 3
-      h: 3
-      minW: 2
-      minH: 2
-    - i: openclaw-agents
-      x: 0
-      'y': 3
-      w: 12
-      h: 7
-      minW: 2
-      minH: 2
-    - i: chart-cpu-by-machine
-      x: 0
-      'y': 10
-      w: 4
-      h: 5
-      minW: 2
-      minH: 2
-    - i: chart-memory-by-machine
-      x: 4
-      'y': 10
-      w: 4
-      h: 5
-      minW: 2
-      minH: 2
-    - i: chart-versions
-      x: 8
-      'y': 10
-      w: 4
-      h: 5
-      minW: 2
-      minH: 2
-    - i: recent-activity
-      x: 0
-      'y': 15
-      w: 12
-      h: 5
-      minW: 2
-      minH: 2
+  - i: kpi-agent-count
+    x: 0
+    y: 0
+    w: 3
+    h: 3
+    minW: 2
+    minH: 2
+  - i: kpi-avg-cpu
+    x: 3
+    y: 0
+    w: 3
+    h: 3
+    minW: 2
+    minH: 2
+  - i: kpi-avg-memory
+    x: 6
+    y: 0
+    w: 3
+    h: 3
+    minW: 2
+    minH: 2
+  - i: kpi-peak-cpu
+    x: 9
+    y: 0
+    w: 3
+    h: 3
+    minW: 2
+    minH: 2
+  - i: openclaw-agents
+    x: 0
+    y: 3
+    w: 12
+    h: 7
+    minW: 2
+    minH: 2
+  - i: chart-cpu-by-machine
+    x: 0
+    y: 10
+    w: 4
+    h: 5
+    minW: 2
+    minH: 2
+  - i: chart-memory-by-machine
+    x: 4
+    y: 10
+    w: 4
+    h: 5
+    minW: 2
+    minH: 2
+  - i: chart-versions
+    x: 8
+    y: 10
+    w: 4
+    h: 5
+    minW: 2
+    minH: 2
+  - i: recent-activity
+    x: 0
+    y: 15
+    w: 12
+    h: 5
+    minW: 2
+    minH: 2
