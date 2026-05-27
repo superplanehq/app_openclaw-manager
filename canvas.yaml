@@ -8,43 +8,25 @@ metadata:
   isTemplate: false
 spec:
   nodes:
-  - id: upsert-upgrade-agent
-    name: Bump agent version
+  - id: upsert-backup-metadata
+    name: Record backup
     type: TYPE_ACTION
     component: upsertMemory
     configuration:
       matchList:
       - name: machine_name
-        value: "{{ $['upgrade'].data.machine_name }}"
+        value: "{{ $['backup'].data.machine_name }}"
       namespace: openclawAgents
       valueList:
-      - name: version
-        value: '{{ trim(split(split($[''Upgrade OpenClaw''].data.stdout, "openclaw_version=")[1],
-          "\n")[0]) }}'
-      - name: gateway_status
-        value: '{{ trim(split(split($[''Upgrade OpenClaw''].data.stdout, "gateway_status=")[1],
-          "\n")[0]) }}'
-      - name: cpu_usage
-        value: '{{ trim(split(split($[''Upgrade OpenClaw''].data.stdout, "cpu_usage=")[1],
-          "\n")[0]) }}'
-      - name: memory_usage
-        value: '{{ trim(split(split($[''Upgrade OpenClaw''].data.stdout, "memory_usage=")[1],
-          "\n")[0]) }}'
+      - name: last_backup_ami
+        value: "{{ $['Create AMI Backup'].data.image.imageId }}"
+      - name: last_backup_at
+        value: "{{ int(now().Unix()) }}"
       - name: updated_at
         value: "{{ int(now().Unix()) }}"
     position:
       x: 2040
-      y: 1500
-    isCollapsed: false
-    paused: false
-  - id: noop-upgrade-complete
-    name: Upgrade complete
-    type: TYPE_ACTION
-    component: noop
-    configuration: {}
-    position:
-      x: 2680
-      y: 1500
+      y: 1960
     isCollapsed: false
     paused: false
   - id: trigger-backup
@@ -58,16 +40,6 @@ spec:
           machine_name: ''
     position:
       x: 120
-      y: 1960
-    isCollapsed: false
-    paused: false
-  - id: noop-backup-complete
-    name: Backup complete
-    type: TYPE_ACTION
-    component: noop
-    configuration: {}
-    position:
-      x: 2680
       y: 1960
     isCollapsed: false
     paused: false
@@ -86,71 +58,6 @@ spec:
     position:
       x: 120
       y: 120
-    isCollapsed: false
-    paused: false
-  - id: read-all-agents
-    name: Read Running Agents
-    type: TYPE_ACTION
-    component: readMemory
-    configuration:
-      emitMode: oneByOne
-      matchList:
-      - name: status
-        value: running
-      namespace: openclawAgents
-      resultMode: all
-    position:
-      x: 760
-      y: 2420
-    isCollapsed: false
-    paused: false
-  - id: ssh-collect-metrics
-    name: Collect Metrics
-    type: TYPE_ACTION
-    component: ssh
-    configuration:
-      authentication:
-        authMethod: ssh_key
-        privateKey:
-          key: private_key
-          secret: openclaw-ec2-ssh-key
-      commands: |
-        set -euo pipefail
-        export PATH="$(npm prefix -g)/bin:${PATH}"
-        [[ -f /etc/openclaw/provision.env ]] && set -a && source /etc/openclaw/provision.env && set +a
-        cores="$(nproc)"; load1="$(awk '{print $1}' /proc/loadavg)"
-        cpu_usage="$(awk -v l="${load1}" -v c="${cores}" 'BEGIN { v=int((l/c)*100); if (v>100) v=100; if (v<0) v=0; print v }')"
-        memory_usage="$(free | awk '/Mem:/ { if ($2 == 0) print 0; else printf "%d", ($3/$2)*100 }')"
-        openclaw_version="$(openclaw --version 2>/dev/null | head -1 | tr -d '\r\n' || echo unknown)"
-        gateway_status="$(openclaw gateway status 2>/dev/null | head -1 | tr -d '\r\n' || echo stopped)"
-        echo "cpu_usage=${cpu_usage}"; echo "memory_usage=${memory_usage}"; echo "openclaw_version=${openclaw_version}"; echo "gateway_status=${gateway_status}"
-      host: "{{ $['Read Running Agents'].data.values[0].public_ip }}"
-      port: 22
-      timeout: 120
-      username: ubuntu
-    position:
-      x: 1400
-      y: 2420
-    isCollapsed: false
-    paused: false
-  - id: annotation-quick-start
-    name: Quick start
-    type: TYPE_WIDGET
-    component: annotation
-    configuration:
-      color: yellow
-      height: 200
-      text: |
-        ## Quick start
-
-        1. Connect **AWS** + secret `openclaw-ec2-ssh-key`
-        2. Set **AMI**, **subnet**, and **key pair** on Create EC2 Instance
-        3. Run **Start OpenClaw server**
-        4. Use **Console** for the fleet table, metrics, upgrade & backup
-      width: 360
-    position:
-      x: 120
-      y: -220
     isCollapsed: false
     paused: false
   - id: create-ec2-instance
@@ -190,20 +97,6 @@ spec:
       y: 120
     isCollapsed: false
     paused: false
-  - id: trigger-stop-server
-    name: Stop OpenClaw server
-    type: TYPE_TRIGGER
-    component: start
-    configuration:
-      templates:
-      - name: run
-        payload:
-          machine_name: claw-prod-01
-    position:
-      x: 120
-      y: 580
-    isCollapsed: false
-    paused: false
   - id: read-agent-stop
     name: Read Agent (Stop)
     type: TYPE_ACTION
@@ -216,36 +109,6 @@ spec:
       resultMode: latest
     position:
       x: 760
-      y: 580
-    isCollapsed: false
-    paused: false
-  - id: ssh-stop-openclaw
-    name: Stop OpenClaw Gateway
-    type: TYPE_ACTION
-    component: ssh
-    configuration:
-      authentication:
-        authMethod: ssh_key
-        privateKey:
-          key: private_key
-          secret: openclaw-ec2-ssh-key
-      commands: |
-        set -euo pipefail
-        export PATH="$(npm prefix -g)/bin:${PATH}"
-        [[ -f /etc/openclaw/provision.env ]] && set -a && source /etc/openclaw/provision.env && set +a
-        openclaw gateway stop
-        cores="$(nproc)"; load1="$(awk '{print $1}' /proc/loadavg)"
-        cpu_usage="$(awk -v l="${load1}" -v c="${cores}" 'BEGIN { v=int((l/c)*100); if (v>100) v=100; if (v<0) v=0; print v }')"
-        memory_usage="$(free | awk '/Mem:/ { if ($2 == 0) print 0; else printf "%d", ($3/$2)*100 }')"
-        openclaw_version="$(openclaw --version 2>/dev/null | head -1 | tr -d '\r\n' || echo unknown)"
-        gateway_status="$(openclaw gateway status 2>/dev/null | head -1 | tr -d '\r\n' || echo stopped)"
-        echo "cpu_usage=${cpu_usage}"; echo "memory_usage=${memory_usage}"; echo "openclaw_version=${openclaw_version}"; echo "gateway_status=${gateway_status}"
-      host: "{{ $['Read Agent (Stop)'].data.values[0].public_ip }}"
-      port: 22
-      timeout: 300
-      username: ubuntu
-    position:
-      x: 1400
       y: 580
     isCollapsed: false
     paused: false
@@ -263,40 +126,43 @@ spec:
       y: 1040
     isCollapsed: false
     paused: false
-  - id: read-agent-restart
-    name: Read Agent (Restart)
+  - id: read-agent-backup
+    name: Read Agent (Backup)
     type: TYPE_ACTION
     component: readMemory
     configuration:
       matchList:
       - name: machine_name
-        value: "{{ $['Restart OpenClaw server'].data.machine_name }}"
+        value: "{{ $['backup'].data.machine_name }}"
       namespace: openclawAgents
       resultMode: latest
     position:
       x: 760
-      y: 1040
+      y: 1960
     isCollapsed: false
     paused: false
-  - id: upsert-backup-metadata
-    name: Record backup
+  - id: noop-backup-complete
+    name: Backup complete
     type: TYPE_ACTION
-    component: upsertMemory
-    configuration:
-      matchList:
-      - name: machine_name
-        value: "{{ $['backup'].data.machine_name }}"
-      namespace: openclawAgents
-      valueList:
-      - name: last_backup_ami
-        value: "{{ $['Create AMI Backup'].data.image.imageId }}"
-      - name: last_backup_at
-        value: "{{ int(now().Unix()) }}"
-      - name: updated_at
-        value: "{{ int(now().Unix()) }}"
+    component: noop
+    configuration: {}
     position:
-      x: 2040
+      x: 2680
       y: 1960
+    isCollapsed: false
+    paused: false
+  - id: trigger-stop-server
+    name: Stop OpenClaw server
+    type: TYPE_TRIGGER
+    component: start
+    configuration:
+      templates:
+      - name: run
+        payload:
+          machine_name: claw-prod-01
+    position:
+      x: 120
+      y: 580
     isCollapsed: false
     paused: false
   - id: add-agent
@@ -339,54 +205,60 @@ spec:
       y: 120
     isCollapsed: false
     paused: false
-  - id: display-start-complete
-    name: Start complete
+  - id: upsert-mark-stopped
+    name: Mark server stopped
     type: TYPE_ACTION
-    component: display
+    component: upsertMemory
     configuration:
-      color: green
-      message: |
-        OpenClaw server {{ $['Start OpenClaw server'].data.machine_name }} started.
-
-        Instance: {{ $['Create EC2 Instance'].data.instanceId }}
-        Public IP: {{ $['Create EC2 Instance'].data.publicIpAddress }}
-        Agent: {{ $['Start OpenClaw server'].data.agent_name }}
-        Version: {{ trim(split(split($['Setup OpenClaw'].data.stdout, "openclaw_version=")[1], "\n")[0]) }}
-        Gateway: {{ trim(split(split($['Setup OpenClaw'].data.stdout, "gateway_status=")[1], "\n")[0]) }}
+      matchList:
+      - name: machine_name
+        value: "{{ $['Stop OpenClaw server'].data.machine_name }}"
+      namespace: openclawAgents
+      valueList:
+      - name: status
+        value: stopped
+      - name: gateway_status
+        value: '{{ trim(split(split($[''Stop OpenClaw Gateway''].data.stdout, "gateway_status=")[1],
+          "\n")[0]) }}'
+      - name: cpu_usage
+        value: '0'
+      - name: memory_usage
+        value: '0'
+      - name: updated_at
+        value: "{{ int(now().Unix()) }}"
     position:
-      x: 2680
-      y: 120
-    isCollapsed: false
-    paused: false
-  - id: noop-stop-complete
-    name: Stop complete
-    type: TYPE_ACTION
-    component: noop
-    configuration: {}
-    position:
-      x: 2680
+      x: 2040
       y: 580
     isCollapsed: false
     paused: false
-  - id: annotation-prerequisites
-    name: Prerequisites
-    type: TYPE_WIDGET
-    component: annotation
+  - id: ssh-stop-openclaw
+    name: Stop OpenClaw Gateway
+    type: TYPE_ACTION
+    component: ssh
     configuration:
-      color: blue
-      height: 180
-      text: |
-        ### Prerequisites
-
-        - AWS integration (EC2 + AMI create)
-        - EC2 key pair in AWS + private key in SuperPlane
-        - Public subnet with internet access
-        - Optional: SSM `/openclaw/provision` for model API keys
-        - Recommended: **t3.small** (2 GB RAM) or larger
-      width: 320
+      authentication:
+        authMethod: ssh_key
+        privateKey:
+          key: private_key
+          secret: openclaw-ec2-ssh-key
+      commands: |
+        set -euo pipefail
+        export PATH="$(npm prefix -g)/bin:${PATH}"
+        [[ -f /etc/openclaw/provision.env ]] && set -a && source /etc/openclaw/provision.env && set +a
+        openclaw gateway stop
+        cores="$(nproc)"; load1="$(awk '{print $1}' /proc/loadavg)"
+        cpu_usage="$(awk -v l="${load1}" -v c="${cores}" 'BEGIN { v=int((l/c)*100); if (v>100) v=100; if (v<0) v=0; print v }')"
+        memory_usage="$(free | awk '/Mem:/ { if ($2 == 0) print 0; else printf "%d", ($3/$2)*100 }')"
+        openclaw_version="$(openclaw --version 2>/dev/null | head -1 | tr -d '\r\n' || echo unknown)"
+        gateway_status="$(openclaw gateway status 2>/dev/null | head -1 | tr -d '\r\n' || echo stopped)"
+        echo "cpu_usage=${cpu_usage}"; echo "memory_usage=${memory_usage}"; echo "openclaw_version=${openclaw_version}"; echo "gateway_status=${gateway_status}"
+      host: "{{ $['Read Agent (Stop)'].data.values[0].public_ip }}"
+      port: 22
+      timeout: 300
+      username: ubuntu
     position:
-      x: 520
-      y: -220
+      x: 1400
+      y: 580
     isCollapsed: false
     paused: false
   - id: setup-openclaw
@@ -439,6 +311,242 @@ spec:
     position:
       x: 1400
       y: 120
+    isCollapsed: false
+    paused: false
+  - id: noop-restart-complete
+    name: Restart complete
+    type: TYPE_ACTION
+    component: noop
+    configuration: {}
+    position:
+      x: 2680
+      y: 1040
+    isCollapsed: false
+    paused: false
+  - id: trigger-metrics-sync
+    name: Metrics Sync
+    type: TYPE_TRIGGER
+    component: schedule
+    configuration:
+      minutesInterval: 5
+      timezone: '0'
+      type: minutes
+    metadata:
+      nextTrigger: '2026-05-27T15:28:13Z'
+      referenceTime: '2026-05-27T15:23:13Z'
+    position:
+      x: 120
+      y: 2420
+    isCollapsed: false
+    paused: false
+  - id: trigger-upgrade
+    name: upgrade
+    type: TYPE_TRIGGER
+    component: start
+    configuration:
+      templates:
+      - name: run
+        payload:
+          machine_name: ''
+          version: latest
+    position:
+      x: 120
+      y: 1500
+    isCollapsed: false
+    paused: false
+  - id: ssh-collect-metrics
+    name: Collect Metrics
+    type: TYPE_ACTION
+    component: ssh
+    configuration:
+      authentication:
+        authMethod: ssh_key
+        privateKey:
+          key: private_key
+          secret: openclaw-ec2-ssh-key
+      commands: |
+        set -euo pipefail
+        export PATH="$(npm prefix -g)/bin:${PATH}"
+        [[ -f /etc/openclaw/provision.env ]] && set -a && source /etc/openclaw/provision.env && set +a
+        cores="$(nproc)"; load1="$(awk '{print $1}' /proc/loadavg)"
+        cpu_usage="$(awk -v l="${load1}" -v c="${cores}" 'BEGIN { v=int((l/c)*100); if (v>100) v=100; if (v<0) v=0; print v }')"
+        memory_usage="$(free | awk '/Mem:/ { if ($2 == 0) print 0; else printf "%d", ($3/$2)*100 }')"
+        openclaw_version="$(openclaw --version 2>/dev/null | head -1 | tr -d '\r\n' || echo unknown)"
+        gateway_status="$(openclaw gateway status 2>/dev/null | head -1 | tr -d '\r\n' || echo stopped)"
+        echo "cpu_usage=${cpu_usage}"; echo "memory_usage=${memory_usage}"; echo "openclaw_version=${openclaw_version}"; echo "gateway_status=${gateway_status}"
+      host: "{{ $['Read Running Agents'].data.values[0].public_ip }}"
+      port: 22
+      timeout: 120
+      username: ubuntu
+    position:
+      x: 1400
+      y: 2420
+    isCollapsed: false
+    paused: false
+  - id: display-start-complete
+    name: Start complete
+    type: TYPE_ACTION
+    component: display
+    configuration:
+      color: green
+      message: |
+        OpenClaw server {{ $['Start OpenClaw server'].data.machine_name }} started.
+
+        Instance: {{ $['Create EC2 Instance'].data.instanceId }}
+        Public IP: {{ $['Create EC2 Instance'].data.publicIpAddress }}
+        Agent: {{ $['Start OpenClaw server'].data.agent_name }}
+        Version: {{ trim(split(split($['Setup OpenClaw'].data.stdout, "openclaw_version=")[1], "\n")[0]) }}
+        Gateway: {{ trim(split(split($['Setup OpenClaw'].data.stdout, "gateway_status=")[1], "\n")[0]) }}
+    position:
+      x: 2680
+      y: 120
+    isCollapsed: false
+    paused: false
+  - id: noop-stop-complete
+    name: Stop complete
+    type: TYPE_ACTION
+    component: noop
+    configuration: {}
+    position:
+      x: 2680
+      y: 580
+    isCollapsed: false
+    paused: false
+  - id: create-ami-backup
+    name: Create AMI Backup
+    type: TYPE_ACTION
+    component: aws.ec2.createImage
+    configuration:
+      description: OpenClaw backup for {{ $['Read Agent (Backup)'].data.values[0].machine_name
+        }}
+      instanceId: "{{ $['Read Agent (Backup)'].data.values[0].instance_id }}"
+      name: openclaw-{{ $['Read Agent (Backup)'].data.values[0].machine_name }}-{{
+        int(now().Unix()) }}
+      noReboot: true
+      region: "{{ $['Read Agent (Backup)'].data.values[0].region }}"
+    position:
+      x: 1400
+      y: 1960
+    isCollapsed: false
+    paused: false
+  - id: read-all-agents
+    name: Read Running Agents
+    type: TYPE_ACTION
+    component: readMemory
+    configuration:
+      emitMode: oneByOne
+      matchList:
+      - name: status
+        value: running
+      namespace: openclawAgents
+      resultMode: all
+    position:
+      x: 760
+      y: 2420
+    isCollapsed: false
+    paused: false
+  - id: read-agent-restart
+    name: Read Agent (Restart)
+    type: TYPE_ACTION
+    component: readMemory
+    configuration:
+      matchList:
+      - name: machine_name
+        value: "{{ $['Restart OpenClaw server'].data.machine_name }}"
+      namespace: openclawAgents
+      resultMode: latest
+    position:
+      x: 760
+      y: 1040
+    isCollapsed: false
+    paused: false
+  - id: upsert-restart-server
+    name: Apply restart state
+    type: TYPE_ACTION
+    component: upsertMemory
+    configuration:
+      matchList:
+      - name: machine_name
+        value: "{{ $['Restart OpenClaw server'].data.machine_name }}"
+      namespace: openclawAgents
+      valueList:
+      - name: status
+        value: running
+      - name: gateway_status
+        value: '{{ trim(split(split($[''Restart OpenClaw Gateway''].data.stdout, "gateway_status=")[1],
+          "\n")[0]) }}'
+      - name: cpu_usage
+        value: '{{ trim(split(split($[''Restart OpenClaw Gateway''].data.stdout, "cpu_usage=")[1],
+          "\n")[0]) }}'
+      - name: memory_usage
+        value: '{{ trim(split(split($[''Restart OpenClaw Gateway''].data.stdout, "memory_usage=")[1],
+          "\n")[0]) }}'
+      - name: version
+        value: '{{ trim(split(split($[''Restart OpenClaw Gateway''].data.stdout, "openclaw_version=")[1],
+          "\n")[0]) }}'
+      - name: updated_at
+        value: "{{ int(now().Unix()) }}"
+    position:
+      x: 2040
+      y: 1040
+    isCollapsed: false
+    paused: false
+  - id: upsert-metrics
+    name: Update Fleet Metrics
+    type: TYPE_ACTION
+    component: upsertMemory
+    configuration:
+      matchList:
+      - name: machine_name
+        value: "{{ $['Read Running Agents'].data.values[0].machine_name }}"
+      namespace: openclawAgents
+      valueList:
+      - name: cpu_usage
+        value: '{{ trim(split(split($[''Collect Metrics''].data.stdout, "cpu_usage=")[1],
+          "\n")[0]) }}'
+      - name: memory_usage
+        value: '{{ trim(split(split($[''Collect Metrics''].data.stdout, "memory_usage=")[1],
+          "\n")[0]) }}'
+      - name: version
+        value: '{{ trim(split(split($[''Collect Metrics''].data.stdout, "openclaw_version=")[1],
+          "\n")[0]) }}'
+      - name: gateway_status
+        value: '{{ trim(split(split($[''Collect Metrics''].data.stdout, "gateway_status=")[1],
+          "\n")[0]) }}'
+      - name: updated_at
+        value: "{{ int(now().Unix()) }}"
+    position:
+      x: 2040
+      y: 2420
+    isCollapsed: false
+    paused: false
+  - id: upsert-upgrade-agent
+    name: Bump agent version
+    type: TYPE_ACTION
+    component: upsertMemory
+    configuration:
+      matchList:
+      - name: machine_name
+        value: "{{ $['upgrade'].data.machine_name }}"
+      namespace: openclawAgents
+      valueList:
+      - name: version
+        value: '{{ trim(split(split($[''Upgrade OpenClaw''].data.stdout, "openclaw_version=")[1],
+          "\n")[0]) }}'
+      - name: gateway_status
+        value: '{{ trim(split(split($[''Upgrade OpenClaw''].data.stdout, "gateway_status=")[1],
+          "\n")[0]) }}'
+      - name: cpu_usage
+        value: '{{ trim(split(split($[''Upgrade OpenClaw''].data.stdout, "cpu_usage=")[1],
+          "\n")[0]) }}'
+      - name: memory_usage
+        value: '{{ trim(split(split($[''Upgrade OpenClaw''].data.stdout, "memory_usage=")[1],
+          "\n")[0]) }}'
+      - name: updated_at
+        value: "{{ int(now().Unix()) }}"
+    position:
+      x: 2040
+      y: 1500
     isCollapsed: false
     paused: false
   - id: ssh-restart-openclaw
@@ -503,119 +611,6 @@ spec:
       y: 1500
     isCollapsed: false
     paused: false
-  - id: upsert-mark-stopped
-    name: Mark server stopped
-    type: TYPE_ACTION
-    component: upsertMemory
-    configuration:
-      matchList:
-      - name: machine_name
-        value: "{{ $['Stop OpenClaw server'].data.machine_name }}"
-      namespace: openclawAgents
-      valueList:
-      - name: status
-        value: stopped
-      - name: gateway_status
-        value: '{{ trim(split(split($[''Stop OpenClaw Gateway''].data.stdout, "gateway_status=")[1],
-          "\n")[0]) }}'
-      - name: cpu_usage
-        value: '0'
-      - name: memory_usage
-        value: '0'
-      - name: updated_at
-        value: "{{ int(now().Unix()) }}"
-    position:
-      x: 2040
-      y: 580
-    isCollapsed: false
-    paused: false
-  - id: upsert-restart-server
-    name: Apply restart state
-    type: TYPE_ACTION
-    component: upsertMemory
-    configuration:
-      matchList:
-      - name: machine_name
-        value: "{{ $['Restart OpenClaw server'].data.machine_name }}"
-      namespace: openclawAgents
-      valueList:
-      - name: status
-        value: running
-      - name: gateway_status
-        value: '{{ trim(split(split($[''Restart OpenClaw Gateway''].data.stdout, "gateway_status=")[1],
-          "\n")[0]) }}'
-      - name: cpu_usage
-        value: '{{ trim(split(split($[''Restart OpenClaw Gateway''].data.stdout, "cpu_usage=")[1],
-          "\n")[0]) }}'
-      - name: memory_usage
-        value: '{{ trim(split(split($[''Restart OpenClaw Gateway''].data.stdout, "memory_usage=")[1],
-          "\n")[0]) }}'
-      - name: version
-        value: '{{ trim(split(split($[''Restart OpenClaw Gateway''].data.stdout, "openclaw_version=")[1],
-          "\n")[0]) }}'
-      - name: updated_at
-        value: "{{ int(now().Unix()) }}"
-    position:
-      x: 2040
-      y: 1040
-    isCollapsed: false
-    paused: false
-  - id: noop-restart-complete
-    name: Restart complete
-    type: TYPE_ACTION
-    component: noop
-    configuration: {}
-    position:
-      x: 2680
-      y: 1040
-    isCollapsed: false
-    paused: false
-  - id: read-agent-backup
-    name: Read Agent (Backup)
-    type: TYPE_ACTION
-    component: readMemory
-    configuration:
-      matchList:
-      - name: machine_name
-        value: "{{ $['backup'].data.machine_name }}"
-      namespace: openclawAgents
-      resultMode: latest
-    position:
-      x: 760
-      y: 1960
-    isCollapsed: false
-    paused: false
-  - id: trigger-metrics-sync
-    name: Metrics Sync
-    type: TYPE_TRIGGER
-    component: schedule
-    configuration:
-      minutesInterval: 5
-      timezone: '0'
-      type: minutes
-    metadata:
-      nextTrigger: '2026-05-27T15:28:13Z'
-      referenceTime: '2026-05-27T15:23:13Z'
-    position:
-      x: 120
-      y: 2420
-    isCollapsed: false
-    paused: false
-  - id: trigger-upgrade
-    name: upgrade
-    type: TYPE_TRIGGER
-    component: start
-    configuration:
-      templates:
-      - name: run
-        payload:
-          machine_name: ''
-          version: latest
-    position:
-      x: 120
-      y: 1500
-    isCollapsed: false
-    paused: false
   - id: read-agent-upgrade
     name: Read Agent (Upgrade)
     type: TYPE_ACTION
@@ -631,50 +626,55 @@ spec:
       y: 1500
     isCollapsed: false
     paused: false
-  - id: create-ami-backup
-    name: Create AMI Backup
+  - id: noop-upgrade-complete
+    name: Upgrade complete
     type: TYPE_ACTION
-    component: aws.ec2.createImage
-    configuration:
-      description: OpenClaw backup for {{ $['Read Agent (Backup)'].data.values[0].machine_name
-        }}
-      instanceId: "{{ $['Read Agent (Backup)'].data.values[0].instance_id }}"
-      name: openclaw-{{ $['Read Agent (Backup)'].data.values[0].machine_name }}-{{
-        int(now().Unix()) }}
-      noReboot: true
-      region: "{{ $['Read Agent (Backup)'].data.values[0].region }}"
+    component: noop
+    configuration: {}
     position:
-      x: 1400
-      y: 1960
+      x: 2680
+      y: 1500
     isCollapsed: false
     paused: false
-  - id: upsert-metrics
-    name: Update Fleet Metrics
-    type: TYPE_ACTION
-    component: upsertMemory
+  - id: annotation-quick-start
+    name: Quick start
+    type: TYPE_WIDGET
+    component: annotation
     configuration:
-      matchList:
-      - name: machine_name
-        value: "{{ $['Read Running Agents'].data.values[0].machine_name }}"
-      namespace: openclawAgents
-      valueList:
-      - name: cpu_usage
-        value: '{{ trim(split(split($[''Collect Metrics''].data.stdout, "cpu_usage=")[1],
-          "\n")[0]) }}'
-      - name: memory_usage
-        value: '{{ trim(split(split($[''Collect Metrics''].data.stdout, "memory_usage=")[1],
-          "\n")[0]) }}'
-      - name: version
-        value: '{{ trim(split(split($[''Collect Metrics''].data.stdout, "openclaw_version=")[1],
-          "\n")[0]) }}'
-      - name: gateway_status
-        value: '{{ trim(split(split($[''Collect Metrics''].data.stdout, "gateway_status=")[1],
-          "\n")[0]) }}'
-      - name: updated_at
-        value: "{{ int(now().Unix()) }}"
+      color: yellow
+      height: 224
+      text: |
+        ## Quick start
+
+        1. Connect **AWS** + secret `openclaw-ec2-ssh-key`
+        2. Set **AMI**, **subnet**, and **key pair** on Create EC2 Instance
+        3. Run **Start OpenClaw server**
+        4. Use **Console** for the fleet table, metrics, upgrade & backup
+      width: 400
     position:
-      x: 2040
-      y: 2420
+      x: 120
+      y: -240
+    isCollapsed: false
+    paused: false
+  - id: annotation-prerequisites
+    name: Prerequisites
+    type: TYPE_WIDGET
+    component: annotation
+    configuration:
+      color: blue
+      height: 228
+      text: |
+        ### Prerequisites
+
+        - AWS integration (EC2 + AMI create)
+        - EC2 key pair in AWS + private key in SuperPlane
+        - Public subnet with internet access
+        - Optional: SSM `/openclaw/provision` for model API keys
+        - Recommended: **t3.small** (2 GB RAM) or larger
+      width: 376
+    position:
+      x: 576
+      y: -240
     isCollapsed: false
     paused: false
   edges:
