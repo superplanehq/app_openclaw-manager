@@ -60,8 +60,6 @@ spec:
         x: 720
         "y": 120
       isCollapsed: false
-      integration:
-        id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
       paused: false
     - id: "setup-openclaw"
       name: "Setup OpenClaw"
@@ -491,8 +489,6 @@ spec:
         x: 1320
         "y": 1152
       isCollapsed: false
-      integration:
-        id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
       paused: false
     - id: "upsert-backup-metadata"
       name: "Record backup"
