@@ -168,24 +168,6 @@ spec:
           type: donut
           xField: version
         title: Agent versions
-    - id: node-start
-      type: node
-      content:
-        node: Start OpenClaw server
-        showRun: true
-        title: Start
-    - id: node-stop
-      type: node
-      content:
-        node: Stop OpenClaw server
-        showRun: true
-        title: Stop
-    - id: node-restart
-      type: node
-      content:
-        node: Restart OpenClaw server
-        showRun: true
-        title: Restart
     - id: recent-activity
       type: table
       content:
@@ -267,30 +249,9 @@ spec:
       h: 5
       minW: 2
       minH: 2
-    - i: node-start
-      x: 0
-      'y': 15
-      w: 2
-      h: 3
-      minW: 2
-      minH: 2
-    - i: node-stop
-      x: 2
-      'y': 15
-      w: 2
-      h: 3
-      minW: 2
-      minH: 2
-    - i: node-restart
-      x: 4
-      'y': 15
-      w: 2
-      h: 3
-      minW: 2
-      minH: 2
     - i: recent-activity
       x: 0
-      'y': 18
+      'y': 15
       w: 12
       h: 5
       minW: 2
