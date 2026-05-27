@@ -129,7 +129,7 @@ spec:
           key: private_key
           secret: openclaw-ec2-ssh-key
       commands: |
- PATH="$(npm prefix -g)/bin:${PATH}"
+        export PATH="$(npm prefix -g)/bin:${PATH}"
         [[ -f /etc/openclaw/provision.env ]] && set -a && source /etc/openclaw/provision.env && set +a
         openclaw gateway stop
         cores="$(nproc)"; load1="$(awk '{print $1}' /proc/loadavg)"
@@ -210,7 +210,7 @@ spec:
           key: private_key
           secret: openclaw-ec2-ssh-key
       commands: |
- PATH="$(npm prefix -g)/bin:${PATH}"
+        export PATH="$(npm prefix -g)/bin:${PATH}"
         [[ -f /etc/openclaw/provision.env ]] && set -a && source /etc/openclaw/provision.env && set +a
         openclaw gateway restart
         cores="$(nproc)"; load1="$(awk '{print $1}' /proc/loadavg)"
@@ -335,7 +335,7 @@ spec:
           key: private_key
           secret: openclaw-ec2-ssh-key
       commands: |
- PATH="$(npm prefix -g)/bin:${PATH}"
+        export PATH="$(npm prefix -g)/bin:${PATH}"
         [[ -f /etc/openclaw/provision.env ]] && set -a && source /etc/openclaw/provision.env && set +a
         TARGET_VERSION="{{ $['upgrade'].data.version }}"
         if [[ "${TARGET_VERSION}" == "latest" ]]; then openclaw update --yes; else npm install -g "openclaw@${TARGET_VERSION}"; openclaw gateway install --force; openclaw gateway restart; fi
@@ -562,7 +562,7 @@ spec:
           key: private_key
           secret: openclaw-ec2-ssh-key
       commands: |
- OPENCLAW_NOPROMPT=1 DEBIAN_FRONTEND=noninteractive
+        export OPENCLAW_NOPROMPT=1 DEBIAN_FRONTEND=noninteractive
         [[ -f /etc/openclaw/provision.env ]] && set -a && source /etc/openclaw/provision.env && set +a
         command -v loginctl >/dev/null 2>&1 && sudo loginctl enable-linger "${USER}" || true
         sudo mkdir -p /etc/openclaw && sudo chown "${USER}:${USER}" /etc/openclaw
@@ -671,7 +671,7 @@ spec:
           key: private_key
           secret: openclaw-ec2-ssh-key
       commands: |
- PATH="$(npm prefix -g)/bin:${PATH}"
+        export PATH="$(npm prefix -g)/bin:${PATH}"
         [[ -f /etc/openclaw/provision.env ]] && set -a && source /etc/openclaw/provision.env && set +a
         cores="$(nproc)"; load1="$(awk '{print $1}' /proc/loadavg)"
         cpu_usage="$(awk -v l="${load1}" -v c="${cores}" 'BEGIN { v=int((l/c)*100); if (v>100) v=100; if (v<0) v=0; print v }')"
