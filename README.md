@@ -32,7 +32,7 @@ Store a dotenv file in Parameter Store:
 aws ssm put-parameter \
   --name "/openclaw/provision" \
   --type "SecureString" \
-  --value $'OPENAI_API_KEY=sk-...\nAUTH_CHOICE=openai-api-key\n'
+  --value $'ANTHROPIC_API_KEY=sk-ant-...\nAUTH_CHOICE=anthropic-api-key\n'
 ```
 
 Attach an IAM instance profile to your EC2 launches that allows `ssm:GetParameter` on `/openclaw/provision`. The canvas user data fetches this into `/etc/openclaw/provision.env` before setup.
@@ -43,7 +43,7 @@ Supported keys in `provision.env`:
 |---|---|
 | `OPENAI_API_KEY` | OpenAI provider for onboarding |
 | `ANTHROPIC_API_KEY` | Anthropic provider for onboarding |
-| `AUTH_CHOICE` | `openai-api-key`, `anthropic-api-key`, or `skip` |
+| `AUTH_CHOICE` | `anthropic-api-key` (default), `openai-api-key`, or `skip` |
 | `OPENCLAW_GATEWAY_TOKEN` | Optional; auto-generated if omitted |
 
 ## Customization
