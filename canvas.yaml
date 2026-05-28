@@ -135,17 +135,9 @@ spec:
       namespace: openclawAgents
       valueList:
       - name: version
-        value: '{{ trim(split(split($[''Verify OpenClaw Install''].data.stdout, "openclaw_version=")[1],
-          "\n")[0]) }}'
-      - name: cpu_usage
-        value: '{{ trim(split(split($[''Verify OpenClaw Install''].data.stdout, "cpu_usage=")[1],
-          "\n")[0]) }}'
-      - name: memory_usage
-        value: '{{ trim(split(split($[''Verify OpenClaw Install''].data.stdout, "memory_usage=")[1],
-          "\n")[0]) }}'
+        value: "{{ $['Start OpenClaw server'].data.version }}"
       - name: gateway_status
-        value: '{{ trim(split(split($[''Verify OpenClaw Install''].data.stdout, "gateway_status=")[1],
-          "\n")[0]) }}'
+        value: running
       - name: status
         value: running
       - name: updated_at
@@ -602,14 +594,14 @@ spec:
         privateKey:
           key: private_key
           secret: openclaw-ec2-ssh-key
-      commands: bash /etc/openclaw/wait-for-result.sh
+      commands: systemctl status openclaw --no-pager
       connectionRetry:
         enabled: true
         intervalSeconds: 15
         retries: 40
       host: "{{ $['Create EC2 Instance'].data.publicIpAddress }}"
       port: 22
-      timeout: 3600
+      timeout: 120
       username: ubuntu
     position:
       x: 2688
@@ -631,7 +623,7 @@ spec:
       - name: gateway_status
         value: failed
       - name: verify_error
-        value: "{{ $['Verify OpenClaw Install'].data.stderr }}"
+        value: "{{ $['Verify OpenClaw Install'].data.stdout }}"
       - name: updated_at
         value: "{{ int(now().Unix()) }}"
     position:
