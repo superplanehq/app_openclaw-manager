@@ -93,6 +93,14 @@ spec:
             machine_name: "{{ machine_name }}"
             version: latest
           variant: primary
+        - confirm: Restart {{ agent_name }} on {{ machine_name }}?
+          icon: refresh
+          kind: trigger
+          label: Restart
+          node: restart
+          payload:
+            machine_name: "{{ machine_name }}"
+          variant: default
         - confirm: Create a backup of {{ machine_name }}?
           icon: external-link
           kind: trigger

@@ -488,14 +488,14 @@ spec:
     isCollapsed: false
     paused: false
   - id: trigger-restart-server
-    name: Restart OpenClaw server
+    name: restart
     type: TYPE_TRIGGER
     component: start
     configuration:
       templates:
       - name: run
         payload:
-          machine_name: claw-prod-01
+          machine_name: ''
     position:
       x: 120
       "y": 1040
@@ -580,7 +580,7 @@ spec:
     configuration:
       matchList:
       - name: machine_name
-        value: "{{ $['Restart OpenClaw server'].data.machine_name }}"
+        value: "{{ $['restart'].data.machine_name }}"
       namespace: openclawAgents
       resultMode: latest
     position:
@@ -660,7 +660,7 @@ spec:
     configuration:
       matchList:
       - name: machine_name
-        value: "{{ $['Restart OpenClaw server'].data.machine_name }}"
+        value: "{{ $['restart'].data.machine_name }}"
       namespace: openclawAgents
       valueList:
       - name: status
