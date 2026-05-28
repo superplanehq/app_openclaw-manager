@@ -15,7 +15,7 @@ spec:
       render:
         aggregation: count
         kind: number
-        label: Agents in memory
+        label: Agents
       title: Fleet size
   - id: kpi-avg-cpu
     type: number
@@ -202,6 +202,12 @@ spec:
           field: createdAt
           order: desc
       title: Recent canvas activity
+  - id: refresh-metrics
+    type: node
+    content:
+      node: refresh-metrics
+      showRun: true
+      title: Refresh metrics
   layout:
   - i: kpi-agent-count
     x: 0
@@ -264,5 +270,12 @@ spec:
     "y": 15
     w: 12
     h: 5
+    minW: 2
+    minH: 2
+  - i: refresh-metrics
+    x: 0
+    "y": 20
+    w: 3
+    h: 2
     minW: 2
     minH: 2

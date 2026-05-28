@@ -24,6 +24,19 @@ spec:
       "y": 2420
     isCollapsed: false
     paused: false
+  - id: trigger-refresh-metrics
+    name: refresh-metrics
+    type: TYPE_TRIGGER
+    component: start
+    configuration:
+      templates:
+      - name: run
+        payload: {}
+    position:
+      x: 400
+      "y": 2420
+    isCollapsed: false
+    paused: false
   - id: create-ec2-instance
     name: Create EC2 Instance
     type: TYPE_ACTION
@@ -373,7 +386,17 @@ spec:
         privateKey:
           key: private_key
           secret: openclaw-ec2-ssh-key
-      commands: bash /etc/openclaw/collect-metrics.sh
+      commands: |
+        cores="$(nproc)"
+        load1="$(awk '{print $1}' /proc/loadavg)"
+        cpu_usage="$(awk -v l="${load1}" -v c="${cores}" 'BEGIN { v=int((l/c)*100); if (v>100) v=100; if (v<0) v=0; print v }')"
+        memory_usage="$(free | awk '/Mem:/ { if ($2 == 0) print 0; else printf "%d", ($3/$2)*100 }')"
+        openclaw_version="$(sudo openclaw --version 2>/dev/null | head -1 | tr -d '\r\n' || echo unknown)"
+        if sudo systemctl is-active --quiet openclaw; then gateway_status=running; else gateway_status=stopped; fi
+        echo "cpu_usage=${cpu_usage}"
+        echo "memory_usage=${memory_usage}"
+        echo "openclaw_version=${openclaw_version}"
+        echo "gateway_status=${gateway_status}"
       host: "{{ $['Read Running Agents'].data.values[0].public_ip }}"
       port: 22
       timeout: 120
@@ -895,6 +918,9 @@ spec:
     targetId: noop-destroy-complete
     channel: notFound
   - sourceId: trigger-metrics-sync
+    targetId: read-all-agents
+    channel: default
+  - sourceId: trigger-refresh-metrics
     targetId: read-all-agents
     channel: default
   - sourceId: read-all-agents
