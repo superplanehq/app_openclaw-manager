@@ -84,6 +84,12 @@ spec:
           label: Last Updated
         kind: table
         rowActions:
+        - confirm: Refresh CPU and memory for all running agents?
+          icon: refresh
+          kind: trigger
+          label: Refresh metrics
+          node: refresh-metrics
+          variant: default
         - confirm: Upgrade {{ agent_name }} on {{ machine_name }} to the latest version?
           icon: refresh
           kind: trigger
@@ -109,8 +115,8 @@ spec:
           payload:
             machine_name: "{{ machine_name }}"
           variant: default
-        - confirm: Permanently destroy {{ agent_name }} on {{ machine_name }} and terminate
-            its EC2 instance?
+        - confirm: Permanently destroy {{ agent_name }} on {{ machine_name }} and
+            terminate its EC2 instance?
           icon: trash
           kind: trigger
           label: Destroy
@@ -276,6 +282,6 @@ spec:
     x: 0
     "y": 20
     w: 3
-    h: 2
+    h: 4
     minW: 2
     minH: 2
