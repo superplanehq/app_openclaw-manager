@@ -21,7 +21,7 @@ spec:
       referenceTime: '2026-05-27T15:23:13Z'
     position:
       x: 120
-      y: 2420
+      "y": 2420
     isCollapsed: false
     paused: false
   - id: create-ec2-instance
@@ -83,6 +83,7 @@ spec:
       volumeType: gp3
     metadata:
       image: ami-0fc0d6e8d70ab2d42
+      imageName: ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-20260515
       imageOs: ubuntu
       imageOsLabel: Ubuntu
       instanceType: t3.small
@@ -90,9 +91,10 @@ spec:
       region: us-east-1
       securityGroupMode: create
       subnet: subnet-0629829a3cb5942f5
+      subnetName: subnet-0629829a3cb5942f5 (172.31.64.0/20)
     position:
       x: 1384
-      y: 120
+      "y": 120
     isCollapsed: false
     integration:
       id: 51c5c62b-44d2-4656-a23d-4a508fdaba44
@@ -121,7 +123,7 @@ spec:
         value: "{{ int(now().Unix()) }}"
     position:
       x: 2040
-      y: 120
+      "y": 120
     isCollapsed: false
     paused: false
   - id: upsert-after-verify
@@ -144,7 +146,7 @@ spec:
         value: "{{ int(now().Unix()) }}"
     position:
       x: 3336
-      y: 120
+      "y": 120
     isCollapsed: false
     paused: false
   - id: annotation-quick-start
@@ -164,7 +166,7 @@ spec:
       width: 400
     position:
       x: 120
-      y: -240
+      "y": -240
     isCollapsed: false
     paused: false
   - id: noop-stop-complete
@@ -174,7 +176,7 @@ spec:
     configuration: {}
     position:
       x: 2680
-      y: 580
+      "y": 580
     isCollapsed: false
     paused: false
   - id: display-start-failed
@@ -187,7 +189,7 @@ spec:
         Instance'].data.publicIpAddress }} — verify failed\n"
     position:
       x: 3960
-      y: 360
+      "y": 360
     isCollapsed: false
     paused: false
   - id: trigger-upgrade
@@ -202,7 +204,7 @@ spec:
           version: latest
     position:
       x: 120
-      y: 1500
+      "y": 1500
     isCollapsed: false
     paused: false
   - id: ssh-restart-openclaw
@@ -222,7 +224,7 @@ spec:
       username: ubuntu
     position:
       x: 1400
-      y: 1040
+      "y": 1040
     isCollapsed: false
     paused: false
   - id: display-start-complete
@@ -235,7 +237,7 @@ spec:
         Instance'].data.publicIpAddress }}\n"
     position:
       x: 3960
-      y: 120
+      "y": 120
     isCollapsed: false
     paused: false
   - id: read-all-agents
@@ -251,7 +253,7 @@ spec:
       resultMode: all
     position:
       x: 760
-      y: 2420
+      "y": 2420
     isCollapsed: false
     paused: false
   - id: noop-backup-complete
@@ -261,7 +263,7 @@ spec:
     configuration: {}
     position:
       x: 2680
-      y: 1960
+      "y": 1960
     isCollapsed: false
     paused: false
   - id: upsert-upgrade-agent
@@ -290,7 +292,7 @@ spec:
         value: "{{ int(now().Unix()) }}"
     position:
       x: 2040
-      y: 1500
+      "y": 1500
     isCollapsed: false
     paused: false
   - id: upsert-backup-metadata
@@ -311,7 +313,7 @@ spec:
         value: "{{ int(now().Unix()) }}"
     position:
       x: 2040
-      y: 1960
+      "y": 1960
     isCollapsed: false
     paused: false
   - id: noop-restart-complete
@@ -321,7 +323,7 @@ spec:
     configuration: {}
     position:
       x: 2680
-      y: 1040
+      "y": 1040
     isCollapsed: false
     paused: false
   - id: read-agent-upgrade
@@ -336,7 +338,7 @@ spec:
       resultMode: latest
     position:
       x: 760
-      y: 1500
+      "y": 1500
     isCollapsed: false
     paused: false
   - id: create-ami-backup
@@ -356,7 +358,7 @@ spec:
       subscriptionId: ''
     position:
       x: 1400
-      y: 1960
+      "y": 1960
     isCollapsed: false
     integration:
       id: 51c5c62b-44d2-4656-a23d-4a508fdaba44
@@ -378,7 +380,7 @@ spec:
       username: ubuntu
     position:
       x: 1400
-      y: 2420
+      "y": 2420
     isCollapsed: false
     paused: false
   - id: read-agent-backup
@@ -393,7 +395,7 @@ spec:
       resultMode: latest
     position:
       x: 760
-      y: 1960
+      "y": 1960
     isCollapsed: false
     paused: false
   - id: upsert-mark-stopped
@@ -419,7 +421,7 @@ spec:
         value: "{{ int(now().Unix()) }}"
     position:
       x: 2040
-      y: 580
+      "y": 580
     isCollapsed: false
     paused: false
   - id: noop-upgrade-complete
@@ -429,7 +431,7 @@ spec:
     configuration: {}
     position:
       x: 2680
-      y: 1500
+      "y": 1500
     isCollapsed: false
     paused: false
   - id: trigger-stop-server
@@ -443,7 +445,7 @@ spec:
           machine_name: claw-prod-01
     position:
       x: 120
-      y: 580
+      "y": 580
     isCollapsed: false
     paused: false
   - id: read-agent-stop
@@ -458,7 +460,7 @@ spec:
       resultMode: latest
     position:
       x: 760
-      y: 580
+      "y": 580
     isCollapsed: false
     paused: false
   - id: add-agent
@@ -480,7 +482,7 @@ spec:
         value: "{{ int(now().Unix()) }}"
     position:
       x: 768
-      y: 120
+      "y": 120
     isCollapsed: false
     paused: false
   - id: trigger-restart-server
@@ -494,7 +496,7 @@ spec:
           machine_name: claw-prod-01
     position:
       x: 120
-      y: 1040
+      "y": 1040
     isCollapsed: false
     paused: false
   - id: ssh-stop-openclaw
@@ -514,7 +516,7 @@ spec:
       username: ubuntu
     position:
       x: 1400
-      y: 580
+      "y": 580
     isCollapsed: false
     paused: false
   - id: ssh-upgrade-openclaw
@@ -537,7 +539,7 @@ spec:
       username: ubuntu
     position:
       x: 1400
-      y: 1500
+      "y": 1500
     isCollapsed: false
     paused: false
   - id: upsert-metrics
@@ -566,7 +568,7 @@ spec:
         value: "{{ int(now().Unix()) }}"
     position:
       x: 2040
-      y: 2420
+      "y": 2420
     isCollapsed: false
     paused: false
   - id: read-agent-restart
@@ -581,7 +583,7 @@ spec:
       resultMode: latest
     position:
       x: 760
-      y: 1040
+      "y": 1040
     isCollapsed: false
     paused: false
   - id: setup-openclaw
@@ -609,7 +611,7 @@ spec:
       username: ubuntu
     position:
       x: 2688
-      y: 120
+      "y": 120
     isCollapsed: false
     paused: false
   - id: upsert-after-verify-failed
@@ -632,7 +634,7 @@ spec:
         value: "{{ int(now().Unix()) }}"
     position:
       x: 3336
-      y: 360
+      "y": 360
     isCollapsed: false
     paused: false
   - id: trigger-backup
@@ -646,7 +648,7 @@ spec:
           machine_name: ''
     position:
       x: 120
-      y: 1960
+      "y": 1960
     isCollapsed: false
     paused: false
   - id: upsert-restart-server
@@ -677,7 +679,7 @@ spec:
         value: "{{ int(now().Unix()) }}"
     position:
       x: 2040
-      y: 1040
+      "y": 1040
     isCollapsed: false
     paused: false
   - id: trigger-start-server
@@ -694,7 +696,7 @@ spec:
           version: latest
     position:
       x: 120
-      y: 120
+      "y": 120
     isCollapsed: false
     paused: false
   - id: annotation-prerequisites
@@ -715,7 +717,7 @@ spec:
       width: 376
     position:
       x: 576
-      y: -240
+      "y": -240
     isCollapsed: false
     paused: false
   edges:

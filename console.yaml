@@ -64,37 +64,24 @@ spec:
         namespace: openclawAgents
       render:
         columns:
-        - field: machine_name
-          label: Machine
-        - field: instance_id
-          label: EC2 instance
-        - field: public_ip
-          label: Public IP
-        - field: region
-          label: Region
-        - field: cpu_usage
-          format: percent
-          label: CPU usage
-        - field: memory_usage
-          format: percent
-          label: Memory usage
         - field: agent_name
           label: Agent
+        - field: instance_id
+          label: EC2 Instance
+        - field: cpu_usage
+          format: percent
+          label: CPU Usage
+        - field: memory_usage
+          format: percent
+          label: Memory Usage
         - field: version
-          label: OpenClaw version
-        - field: gateway_status
-          format: status
-          label: Gateway
+          label: Version
         - field: status
           format: status
           label: Status
-        - field: verify_error
-          label: Verify error
-        - field: last_backup_ami
-          label: Last backup AMI
         - field: updated_at
           format: relative
-          label: Last updated
+          label: Last Updated
         kind: table
         rowActions:
         - confirm: Upgrade {{ agent_name }} on {{ machine_name }} to the latest version?
@@ -201,63 +188,63 @@ spec:
   layout:
   - i: kpi-agent-count
     x: 0
-    y: 0
+    "y": 0
     w: 3
     h: 3
     minW: 2
     minH: 2
   - i: kpi-avg-cpu
     x: 3
-    y: 0
+    "y": 0
     w: 3
     h: 3
     minW: 2
     minH: 2
   - i: kpi-avg-memory
     x: 6
-    y: 0
+    "y": 0
     w: 3
     h: 3
     minW: 2
     minH: 2
   - i: kpi-peak-cpu
     x: 9
-    y: 0
+    "y": 0
     w: 3
     h: 3
     minW: 2
     minH: 2
   - i: openclaw-agents
     x: 0
-    y: 3
+    "y": 3
     w: 12
     h: 7
     minW: 2
     minH: 2
   - i: chart-cpu-by-machine
     x: 0
-    y: 10
+    "y": 10
     w: 4
     h: 5
     minW: 2
     minH: 2
   - i: chart-memory-by-machine
     x: 4
-    y: 10
+    "y": 10
     w: 4
     h: 5
     minW: 2
     minH: 2
   - i: chart-versions
     x: 8
-    y: 10
+    "y": 10
     w: 4
     h: 5
     minW: 2
     minH: 2
   - i: recent-activity
     x: 0
-    y: 15
+    "y": 15
     w: 12
     h: 5
     minW: 2
