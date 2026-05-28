@@ -36,12 +36,12 @@ spec:
       configureRootVolume: true
       image: ami-0fc0d6e8d70ab2d42
       imageOs: ubuntu
-      instanceType: t3.small
-      keyName: openclaw-key
+      instanceType: "{{ $['Start OpenClaw server'].data.instance_type }}"
+      keyName: "{{ $['Start OpenClaw server'].data.key_name }}"
       name: "{{ $['Start OpenClaw server'].data.machine_name }}"
       region: us-east-1
       securityGroupMode: create
-      subnet: subnet-0629829a3cb5942f5
+      subnet: "{{ $['Start OpenClaw server'].data.subnet }}"
       userData: |
         #!/bin/bash
         # Update system packages
@@ -52,7 +52,7 @@ spec:
         apt-get install -y nodejs
 
         # Install OpenClaw globally
-        npm install -g openclaw@latest
+        npm install -g openclaw@{{ $['Start OpenClaw server'].data.version }}
 
         # Create the OpenClaw configuration directory
         mkdir -p /root/.openclaw
@@ -217,7 +217,7 @@ spec:
         privateKey:
           key: private_key
           secret: openclaw-ec2-ssh-key
-      commands: bash /etc/openclaw/restart-gateway.sh
+      commands: sudo systemctl restart openclaw && sudo systemctl status openclaw --no-pager
       host: "{{ $['Read Agent (Restart)'].data.values[0].public_ip }}"
       port: 22
       timeout: 300
@@ -411,8 +411,7 @@ spec:
       - name: status
         value: stopped
       - name: gateway_status
-        value: '{{ trim(split(split($[''Stop OpenClaw Gateway''].data.stdout, "gateway_status=")[1],
-          "\n")[0]) }}'
+        value: stopped
       - name: cpu_usage
         value: '0'
       - name: memory_usage
@@ -466,8 +465,11 @@ spec:
   - id: add-agent
     name: Register agent in memory
     type: TYPE_ACTION
-    component: addMemory
+    component: upsertMemory
     configuration:
+      matchList:
+      - name: machine_name
+        value: "{{ $['Start OpenClaw server'].data.machine_name }}"
       namespace: openclawAgents
       valueList:
       - name: machine_name
@@ -509,7 +511,7 @@ spec:
         privateKey:
           key: private_key
           secret: openclaw-ec2-ssh-key
-      commands: bash /etc/openclaw/stop-gateway.sh
+      commands: sudo systemctl stop openclaw && sudo systemctl status openclaw --no-pager
       host: "{{ $['Read Agent (Stop)'].data.values[0].public_ip }}"
       port: 22
       timeout: 300
@@ -664,17 +666,7 @@ spec:
       - name: status
         value: running
       - name: gateway_status
-        value: '{{ trim(split(split($[''Restart OpenClaw Gateway''].data.stdout, "gateway_status=")[1],
-          "\n")[0]) }}'
-      - name: cpu_usage
-        value: '{{ trim(split(split($[''Restart OpenClaw Gateway''].data.stdout, "cpu_usage=")[1],
-          "\n")[0]) }}'
-      - name: memory_usage
-        value: '{{ trim(split(split($[''Restart OpenClaw Gateway''].data.stdout, "memory_usage=")[1],
-          "\n")[0]) }}'
-      - name: version
-        value: '{{ trim(split(split($[''Restart OpenClaw Gateway''].data.stdout, "openclaw_version=")[1],
-          "\n")[0]) }}'
+        value: running
       - name: updated_at
         value: "{{ int(now().Unix()) }}"
     position:
@@ -689,14 +681,108 @@ spec:
     configuration:
       templates:
       - name: run
+        parameters:
+        - name: machine_name
+          type: string
+          title: Machine name
+          defaultString: claw-prod-01
+        - name: agent_name
+          type: string
+          title: Agent name
+          defaultString: research-bot
+        - name: version
+          type: string
+          title: OpenClaw version
+          defaultString: latest
+        - name: instance_type
+          type: string
+          title: EC2 instance type
+          defaultString: t3.small
+        - name: subnet
+          type: string
+          title: Subnet ID
+          defaultString: subnet-0629829a3cb5942f5
+        - name: key_name
+          type: string
+          title: EC2 key pair name
+          defaultString: openclaw-key
         payload:
-          agent_name: research-bot
-          auth_choice: anthropic-api-key
-          machine_name: claw-prod-01
-          version: latest
+          agent_name: '{{ parameters["agent_name"] }}'
+          instance_type: '{{ parameters["instance_type"] }}'
+          key_name: '{{ parameters["key_name"] }}'
+          machine_name: '{{ parameters["machine_name"] }}'
+          subnet: '{{ parameters["subnet"] }}'
+          version: '{{ parameters["version"] }}'
     position:
       x: 120
       "y": 120
+    isCollapsed: false
+    paused: false
+  - id: trigger-destroy
+    name: destroy
+    type: TYPE_TRIGGER
+    component: start
+    configuration:
+      templates:
+      - name: run
+        payload:
+          machine_name: ''
+    position:
+      x: 120
+      "y": 2880
+    isCollapsed: false
+    paused: false
+  - id: read-agent-destroy
+    name: Read Agent (Destroy)
+    type: TYPE_ACTION
+    component: readMemory
+    configuration:
+      matchList:
+      - name: machine_name
+        value: "{{ $['destroy'].data.machine_name }}"
+      namespace: openclawAgents
+      resultMode: latest
+    position:
+      x: 760
+      "y": 2880
+    isCollapsed: false
+    paused: false
+  - id: delete-ec2-instance
+    name: Terminate EC2 Instance
+    type: TYPE_ACTION
+    component: aws.ec2.deleteInstance
+    configuration:
+      instance: "{{ $['Read Agent (Destroy)'].data.values[0].instance_id }}"
+      region: us-east-1
+    position:
+      x: 1400
+      "y": 2880
+    isCollapsed: false
+    integration:
+      id: 51c5c62b-44d2-4656-a23d-4a508fdaba44
+    paused: false
+  - id: delete-agent-memory
+    name: Remove agent from memory
+    type: TYPE_ACTION
+    component: deleteMemory
+    configuration:
+      matchList:
+      - name: machine_name
+        value: "{{ $['destroy'].data.machine_name }}"
+      namespace: openclawAgents
+    position:
+      x: 2040
+      "y": 2880
+    isCollapsed: false
+    paused: false
+  - id: noop-destroy-complete
+    name: Destroy complete
+    type: TYPE_ACTION
+    component: noop
+    configuration: {}
+    position:
+      x: 2680
+      "y": 2880
     isCollapsed: false
     paused: false
   - id: annotation-prerequisites
@@ -793,6 +879,21 @@ spec:
   - sourceId: upsert-backup-metadata
     targetId: noop-backup-complete
     channel: default
+  - sourceId: trigger-destroy
+    targetId: read-agent-destroy
+    channel: default
+  - sourceId: read-agent-destroy
+    targetId: delete-ec2-instance
+    channel: found
+  - sourceId: delete-ec2-instance
+    targetId: delete-agent-memory
+    channel: default
+  - sourceId: delete-agent-memory
+    targetId: noop-destroy-complete
+    channel: deleted
+  - sourceId: delete-agent-memory
+    targetId: noop-destroy-complete
+    channel: notFound
   - sourceId: trigger-metrics-sync
     targetId: read-all-agents
     channel: default

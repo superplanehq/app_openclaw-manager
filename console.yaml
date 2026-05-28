@@ -101,6 +101,15 @@ spec:
           payload:
             machine_name: "{{ machine_name }}"
           variant: default
+        - confirm: Permanently destroy {{ agent_name }} on {{ machine_name }} and terminate
+            its EC2 instance?
+          icon: trash
+          kind: trigger
+          label: Destroy
+          node: destroy
+          payload:
+            machine_name: "{{ machine_name }}"
+          variant: danger
         sort:
           field: cpu_usage
           order: desc
