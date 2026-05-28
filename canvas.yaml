@@ -599,6 +599,10 @@ spec:
         enabled: true
         intervalSeconds: 15
         retries: 40
+      executionRetry:
+        enabled: true
+        intervalSeconds: 15
+        retries: 120
       host: "{{ $['Create EC2 Instance'].data.publicIpAddress }}"
       port: 22
       timeout: 120
