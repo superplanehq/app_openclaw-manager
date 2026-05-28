@@ -84,12 +84,6 @@ spec:
           label: Last Updated
         kind: table
         rowActions:
-        - confirm: Refresh CPU and memory for all running agents?
-          icon: refresh
-          kind: trigger
-          label: Refresh metrics
-          node: refresh-metrics
-          variant: default
         - confirm: Upgrade {{ agent_name }} on {{ machine_name }} to the latest version?
           icon: refresh
           kind: trigger
